@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(PYTHONPATH=. venv/Scripts/python.exe -c \"from app.config import get_settings; s = get_settings\\(\\); print\\(s.supabase_url\\)\")",
+      "Bash(PYTHONPATH=. venv/Scripts/python.exe scripts/seed_employee.py employee@zamp.demo Password123!)"
+    ]
+  }
+}

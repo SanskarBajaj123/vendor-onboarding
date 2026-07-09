@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+
+  --color-surface-0: #f0ede6;
+  --color-surface-1: #f7f6f2;
+  --color-surface-2: #ffffff;
+  --color-border: #e0ddd6;
+  --color-border-strong: #cfccc0;
+  --color-border-danger: #e24b4a;
+
+  --color-text-primary: #1e1e1c;
+  --color-text-secondary: #5f5e5a;
+  --color-text-muted: #888780;
+  --color-text-disabled: #b4b2a9;
+  --color-text-accent: #185fa5;
+  --color-text-danger: #a32d2d;
+  --color-text-success: #14532d;
+  --color-text-warning: #78350f;
+
+  /* Navy primary — used as solid bg for logo box etc. */
+  --color-fill-primary: #1a3a5c;
+  --color-on-primary: #ffffff;
+  --color-fill-disabled: #ececea;
+
+  --color-status-approved-bg: #f0fdf4;
+  --color-status-approved-border: #16a34a;
+  --color-status-approved-text: #14532d;
+
+  --color-status-pending-bg: #fffbeb;
+  --color-status-pending-border: #d97706;
+  --color-status-pending-text: #78350f;
+
+  --color-status-rejected-bg: #fef2f2;
+  --color-status-rejected-border: #dc2626;
+  --color-status-rejected-text: #7f1d1d;
+
+  --radius-card: 14px;
+  --radius-control: 9px;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface-0);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+}
+
+input,
+select,
+textarea {
+  background: var(--color-surface-2);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-control);
+  color: var(--color-text-primary);
+  height: 40px;
+  padding: 0 12px;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+textarea {
+  height: auto;
+  padding: 9px 12px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+}
+
+input.field-error,
+select.field-error {
+  border-color: var(--color-border-danger);
+  background: #fff7f7;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+.animate-fadeUp {
+  animation: fadeUp 0.25s ease;
+}

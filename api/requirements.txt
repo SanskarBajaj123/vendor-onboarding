@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+supabase
+python-dotenv
+pydantic
+pydantic-settings
+python-multipart
+google-genai
+resend
+httpx
+rapidfuzz
+email-validator
+fpdf2

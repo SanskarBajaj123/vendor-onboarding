@@ -1,0 +1,16 @@
+# Python
+api/venv/
+api/__pycache__/
+api/**/__pycache__/
+api/.env
+*.pyc
+
+# Node
+web/node_modules/
+web/dist/
+web/.env.local
+
+# Misc
+test_docs/
+.DS_Store
+*.pdf

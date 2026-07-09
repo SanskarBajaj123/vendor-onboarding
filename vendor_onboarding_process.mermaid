@@ -1,0 +1,65 @@
+flowchart TD
+    A["Vendor fills form + documents<br/>(company details, bank info, tax ID, compliance docs)"]
+    A --> A1{"Layer 1: Front-end validation<br/>runs live on the vendor's form"}
+
+    A1 -- "Invalid: missing field / bad format" --> A2["Inline error shown immediately<br/>no submit possible until fixed"]
+    A2 -.-> A
+
+    A1 -- "Valid: form submitted" --> C{"Tax ID lookup"}
+
+    C -- "New tax ID" --> D1["Create new record"]
+    C -- "Existing Pending/Rejected record" --> D2["Update existing record<br/>treated as resubmission"]
+    C -- "Existing Approved record" --> C2{"Diff new submission<br/>vs. stored record"}
+
+    C2 -- "No differences" --> N1["Notify: no change<br/>status stays Approved"]
+    C2 -- "Any difference found" --> S1["Security verification<br/>link sent to ORIGINAL on-file email<br/>expires in 2 minutes"]
+
+    S1 -- "Confirmed within 2 min" --> D3["Update changed fields<br/>bank vs. non-bank noted in audit trail"]
+    S1 -- "Expired / not clicked" --> S2["Resubmission rejected<br/>no update applied"]
+    S2 --> S3["Email: resubmission rejected"]
+
+    D1 --> E["Layer 2: Document verification<br/>extract + cross-check name, address, tax ID, bank ownership"]
+    D2 --> E
+    D3 --> E
+
+    E --> F{"Automated status decision<br/>no manual approve gate"}
+
+    F -- "All checks consistent" --> G["Status: Approved"]
+    F -- "Minor inconsistency" --> H["Status: Pending"]
+    F -- "Hard mismatch / invalid" --> I["Status: Rejected"]
+
+    G --> J["Dashboard log<br/>status + reasoning + audit trail"]
+    H --> J
+    I --> J
+    N1 --> J
+    S3 --> J
+
+    J --> K["Notify vendor<br/>email: status + reasoning + reapply link if not Approved"]
+
+    subgraph RBAC["Employee Dashboard (RBAC)"]
+        direction TB
+        R1["View all submissions"]
+        R2["Override this vendor's status<br/>requires a reason"]
+        R3["Flag process/logic issue<br/>requires a reason"]
+        R4["Dev feedback log<br/>internal only, never vendor-facing"]
+        R1 --> R2
+        R1 --> R3
+        R3 --> R4
+    end
+
+    R2 -.-> J
+    R2 -.-> K
+
+    classDef approved fill:#f0fdf4,stroke:#16a34a,color:#14532d;
+    classDef pending fill:#fffbeb,stroke:#d97706,color:#78350f;
+    classDef rejected fill:#fef2f2,stroke:#dc2626,color:#7f1d1d;
+    classDef decision fill:#f5f3ff,stroke:#7c6ff0,color:#4338ca;
+    classDef process fill:#eff6ff,stroke:#2563eb,color:#1e3a8a;
+    classDef rbac fill:#f0fdfa,stroke:#0d9488,color:#0f766e;
+
+    class A1,C,C2,F decision;
+    class A,D1,D2,D3,E,J,K,N1,S1 process;
+    class G approved;
+    class H pending;
+    class I,A2,S2,S3 rejected;
+    class R1,R2,R3,R4 rbac;

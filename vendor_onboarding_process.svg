@@ -1,0 +1,187 @@
+<svg viewBox="0 0 1220 1520" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Vendor onboarding process flow</title>
+<desc>Flowchart of the PS-2 vendor onboarding automation: front-end validation happens on the vendor's own form before anything is submitted; approved-vendor resubmissions with any detected change go through a security verification link (2-minute expiry) sent to the original on-file email, and once confirmed proceed directly to updating fields and re-verification, with no separate forced-pending branch for bank changes since the verification link itself is the safeguard. Includes the automated decision, notification, and employee RBAC dashboard.</desc>
+<defs>
+  <marker id="arrow3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#64748b"/>
+  </marker>
+  <marker id="arrowDash3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#0d9488"/>
+  </marker>
+</defs>
+
+<rect x="0" y="0" width="1220" height="1520" fill="#ffffff"/>
+
+<rect x="40" y="20" width="280" height="60" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+<text x="180" y="45" text-anchor="middle" font-size="14" font-weight="700" fill="#1e3a8a">Vendor Fills Form</text>
+<text x="180" y="63" text-anchor="middle" font-size="11" fill="#475569">Company, bank, tax ID + documents</text>
+
+<path d="M180,80 L180,110" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+
+<rect x="30" y="112" width="300" height="82" rx="10" fill="#f5f3ff" stroke="#7c6ff0" stroke-width="1.5" stroke-dasharray="4 3"/>
+<text x="180" y="140" text-anchor="middle" font-size="13" font-weight="700" fill="#4338ca">Layer 1: Front-End Validation</text>
+<text x="180" y="157" text-anchor="middle" font-size="11" fill="#475569">Runs live on the vendor's own form</text>
+<text x="180" y="174" text-anchor="middle" font-size="11" fill="#475569">(tax ID pattern, bank format, etc.)</text>
+
+<path d="M330,153 L440,153" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+<text x="385" y="142" text-anchor="middle" font-size="10" fill="#7f1d1d" font-weight="600">invalid</text>
+
+<rect x="440" y="112" width="250" height="82" rx="10" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5"/>
+<text x="565" y="140" text-anchor="middle" font-size="13" font-weight="700" fill="#7f1d1d">Inline Error, Immediately</text>
+<text x="565" y="157" text-anchor="middle" font-size="11" fill="#7f1d1d">No submit until fixed</text>
+<text x="565" y="174" text-anchor="middle" font-size="11" fill="#7f1d1d">No email · no record created</text>
+<path d="M565,194 L565,215 L180,215 L180,148" stroke="#dc2626" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#arrow3)" fill="none"/>
+
+<path d="M180,194 L180,226" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+<text x="195" y="212" font-size="10" fill="#166534" font-weight="600">valid → submitted</text>
+
+<rect x="20" y="228" width="320" height="80" rx="10" fill="#f5f3ff" stroke="#7c6ff0" stroke-width="1.5" stroke-dasharray="4 3"/>
+<text x="180" y="256" text-anchor="middle" font-size="13" font-weight="700" fill="#4338ca">Tax ID Lookup</text>
+<text x="180" y="273" text-anchor="middle" font-size="11" fill="#475569">Does this tax ID already exist?</text>
+<text x="180" y="290" text-anchor="middle" font-size="11" fill="#475569">New · Pending/Rejected · Approved</text>
+
+<path d="M100,308 L100,344" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+<path d="M180,308 L180,344" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+<path d="M300,308 L620,308 L620,344" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+<text x="70" y="329" font-size="10" fill="#1e3a8a" font-weight="600">new</text>
+<text x="235" y="329" font-size="10" fill="#1e3a8a" font-weight="600">pending/rejected</text>
+<text x="510" y="329" font-size="10" fill="#1e3a8a" font-weight="600">approved match</text>
+
+<rect x="10" y="346" width="180" height="60" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+<text x="100" y="371" text-anchor="middle" font-size="12" font-weight="700" fill="#1e3a8a">Create New Record</text>
+<text x="100" y="388" text-anchor="middle" font-size="10" fill="#475569">Tax ID not seen before</text>
+
+<rect x="200" y="346" width="200" height="60" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+<text x="300" y="371" text-anchor="middle" font-size="12" font-weight="700" fill="#1e3a8a">Update Existing Record</text>
+<text x="300" y="388" text-anchor="middle" font-size="10" fill="#475569">Reapply on same submission</text>
+
+<rect x="500" y="346" width="240" height="60" rx="10" fill="#f5f3ff" stroke="#7c6ff0" stroke-width="1.5" stroke-dasharray="4 3"/>
+<text x="620" y="371" text-anchor="middle" font-size="12" font-weight="700" fill="#4338ca">Diff vs. Stored Record</text>
+<text x="620" y="388" text-anchor="middle" font-size="10" fill="#475569">Already-approved vendor resubmitted</text>
+
+<path d="M550,406 L550,436" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+<path d="M690,406 L860,406 L860,436" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+<text x="490" y="426" font-size="10" fill="#1e3a8a" font-weight="600">no differences</text>
+<text x="770" y="426" font-size="10" fill="#92400e" font-weight="600">any difference found</text>
+
+<rect x="440" y="438" width="220" height="66" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+<text x="550" y="463" text-anchor="middle" font-size="12" font-weight="700" fill="#1e3a8a">Notify: No Change</text>
+<text x="550" y="480" text-anchor="middle" font-size="10" fill="#475569">Status stays Approved</text>
+<text x="550" y="495" text-anchor="middle" font-size="10" fill="#475569">Confirmation email only</text>
+
+<rect x="730" y="438" width="290" height="82" rx="10" fill="#f5f3ff" stroke="#7c6ff0" stroke-width="1.5" stroke-dasharray="4 3"/>
+<text x="875" y="463" text-anchor="middle" font-size="12" font-weight="700" fill="#4338ca">Security Verification</text>
+<text x="875" y="480" text-anchor="middle" font-size="10" fill="#475569">Link sent to ORIGINAL on-file email</text>
+<text x="875" y="495" text-anchor="middle" font-size="10" fill="#475569">(not the new submission's contact info)</text>
+<text x="875" y="510" text-anchor="middle" font-size="10" fill="#92400e" font-weight="600">Expires in 2 minutes</text>
+
+<path d="M800,520 L800,550" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+<path d="M960,520 L1090,520 L1090,550" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+<text x="730" y="540" font-size="10" fill="#166534" font-weight="600">confirmed in time</text>
+<text x="1010" y="540" font-size="10" fill="#7f1d1d" font-weight="600">expired / not clicked</text>
+
+<rect x="980" y="552" width="230" height="60" rx="10" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5"/>
+<text x="1095" y="576" text-anchor="middle" font-size="12" font-weight="700" fill="#7f1d1d">Resubmission Rejected</text>
+<text x="1095" y="593" text-anchor="middle" font-size="10" fill="#7f1d1d">No update applied to record</text>
+
+<path d="M1095,612 L1095,642" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+<rect x="980" y="644" width="230" height="52" rx="10" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5"/>
+<text x="1095" y="666" text-anchor="middle" font-size="11" font-weight="700" fill="#7f1d1d">Email: Resubmission</text>
+<text x="1095" y="682" text-anchor="middle" font-size="11" font-weight="700" fill="#7f1d1d">Rejected</text>
+
+<rect x="680" y="552" width="240" height="66" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+<text x="800" y="577" text-anchor="middle" font-size="12" font-weight="700" fill="#1e3a8a">Update Changed Fields</text>
+<text x="800" y="594" text-anchor="middle" font-size="10" fill="#475569">Bank vs. non-bank noted in</text>
+<text x="800" y="609" text-anchor="middle" font-size="10" fill="#475569">audit trail, same routing either way</text>
+
+<path d="M100,406 L100,700 L230,700 L230,732" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+<path d="M300,406 L300,732" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+<path d="M800,618 L800,660 L360,660 L360,732" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+
+<rect x="20" y="734" width="440" height="66" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+<text x="240" y="760" text-anchor="middle" font-size="13" font-weight="700" fill="#1e3a8a">Layer 2: Document Verification</text>
+<text x="240" y="778" text-anchor="middle" font-size="11" fill="#475569">Extract docs · cross-check name, address, tax ID, bank ownership</text>
+
+<path d="M240,800 L240,831" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+
+<rect x="100" y="833" width="280" height="82" rx="10" fill="#f5f3ff" stroke="#7c6ff0" stroke-width="1.5" stroke-dasharray="4 3"/>
+<text x="240" y="862" text-anchor="middle" font-size="13" font-weight="700" fill="#4338ca">Automated Status Decision</text>
+<text x="240" y="879" text-anchor="middle" font-size="11" fill="#475569">No manual approve gate</text>
+<text x="240" y="895" text-anchor="middle" font-size="11" fill="#475569">Consistent · minor issue · hard mismatch</text>
+
+<path d="M150,915 L70,947" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+<path d="M240,915 L240,947" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+<path d="M330,915 L430,947" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+
+<rect x="20" y="949" width="150" height="56" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+<text x="95" y="972" text-anchor="middle" font-size="12" font-weight="700" fill="#14532d">Approved</text>
+<text x="95" y="989" text-anchor="middle" font-size="10" fill="#14532d">All checks consistent</text>
+
+<rect x="195" y="949" width="150" height="56" rx="10" fill="#fffbeb" stroke="#d97706" stroke-width="1.5"/>
+<text x="270" y="972" text-anchor="middle" font-size="12" font-weight="700" fill="#78350f">Pending</text>
+<text x="270" y="989" text-anchor="middle" font-size="10" fill="#78350f">Minor inconsistency</text>
+
+<rect x="370" y="949" width="150" height="56" rx="10" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5"/>
+<text x="445" y="972" text-anchor="middle" font-size="12" font-weight="700" fill="#7f1d1d">Rejected</text>
+<text x="445" y="989" text-anchor="middle" font-size="10" fill="#7f1d1d">Hard mismatch / invalid</text>
+
+<path d="M95,1005 L95,1060 L300,1060 L300,1090" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+<path d="M270,1005 L300,1090" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+<path d="M445,1005 L445,1060 L310,1060" stroke="#64748b" stroke-width="1.5" fill="none"/>
+<path d="M550,504 L550,1060 L320,1060" stroke="#64748b" stroke-width="1.5" fill="none"/>
+<path d="M1095,696 L1095,1060 L330,1060" stroke="#64748b" stroke-width="1.5" fill="none"/>
+
+<rect x="20" y="1092" width="560" height="66" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+<text x="300" y="1118" text-anchor="middle" font-size="13" font-weight="700" fill="#1e3a8a">Dashboard Log</text>
+<text x="300" y="1136" text-anchor="middle" font-size="11" fill="#475569">Status + full reasoning + audit trail (system decisions and human overrides)</text>
+
+<path d="M300,1158 L300,1189" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow3)" fill="none"/>
+
+<rect x="20" y="1191" width="560" height="66" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+<text x="300" y="1217" text-anchor="middle" font-size="13" font-weight="700" fill="#1e3a8a">Notify Vendor</text>
+<text x="300" y="1235" text-anchor="middle" font-size="11" fill="#475569">Email: status + reasoning + reapply link if Pending/Rejected</text>
+
+<rect x="20" y="1280" width="1180" height="180" rx="14" fill="#f0fdfa" stroke="#0d9488" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="610" y="1306" text-anchor="middle" font-size="13" font-weight="700" fill="#0f766e">Employee Dashboard (RBAC) — vendor role: submit + view own status only</text>
+
+<rect x="45" y="1325" width="260" height="70" rx="10" fill="#ffffff" stroke="#0d9488" stroke-width="1.5"/>
+<text x="175" y="1352" text-anchor="middle" font-size="12" font-weight="700" fill="#0f766e">View All Submissions</text>
+<text x="175" y="1369" text-anchor="middle" font-size="10" fill="#475569">Every vendor, status, reasoning</text>
+
+<path d="M305,1360 L335,1360" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arrowDash3)" fill="none"/>
+
+<rect x="337" y="1325" width="280" height="70" rx="10" fill="#ffffff" stroke="#0d9488" stroke-width="1.5"/>
+<text x="477" y="1348" text-anchor="middle" font-size="12" font-weight="700" fill="#0f766e">Override Vendor Status</text>
+<text x="477" y="1364" text-anchor="middle" font-size="10" fill="#475569">Requires a reason → notifies vendor,</text>
+<text x="477" y="1379" text-anchor="middle" font-size="10" fill="#475569">logs to that vendor's audit trail</text>
+
+<path d="M617,1360 L647,1360" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arrowDash3)" fill="none"/>
+
+<rect x="649" y="1325" width="280" height="70" rx="10" fill="#ffffff" stroke="#0d9488" stroke-width="1.5"/>
+<text x="789" y="1348" text-anchor="middle" font-size="12" font-weight="700" fill="#0f766e">Flag Process / Logic Issue</text>
+<text x="789" y="1364" text-anchor="middle" font-size="10" fill="#475569">Requires a reason → internal only,</text>
+<text x="789" y="1379" text-anchor="middle" font-size="10" fill="#475569">never shown to the vendor</text>
+
+<path d="M929,1360 L959,1360" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arrowDash3)" fill="none"/>
+
+<rect x="961" y="1325" width="220" height="70" rx="10" fill="#f8fafc" stroke="#64748b" stroke-width="1.5"/>
+<text x="1071" y="1352" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">Dev Feedback Log</text>
+<text x="1071" y="1369" text-anchor="middle" font-size="10" fill="#475569">Backlog for improving automation</text>
+
+<path d="M477,1325 L477,1180 L580,1180" stroke="#0d9488" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrowDash3)" fill="none"/>
+<path d="M500,1325 L500,1125 L580,1125" stroke="#0d9488" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrowDash3)" fill="none"/>
+
+<circle cx="40" cy="1485" r="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+<text x="55" y="1490" font-size="11" fill="#334155">Process step</text>
+<circle cx="180" cy="1485" r="6" fill="#f5f3ff" stroke="#7c6ff0" stroke-width="1.5"/>
+<text x="195" y="1490" font-size="11" fill="#334155">Decision point</text>
+<circle cx="320" cy="1485" r="6" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+<text x="335" y="1490" font-size="11" fill="#334155">Approved</text>
+<circle cx="430" cy="1485" r="6" fill="#fffbeb" stroke="#d97706" stroke-width="1.5"/>
+<text x="445" y="1490" font-size="11" fill="#334155">Pending / needs review</text>
+<circle cx="620" cy="1485" r="6" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5"/>
+<text x="635" y="1490" font-size="11" fill="#334155">Rejected / error</text>
+<circle cx="770" cy="1485" r="6" fill="#f0fdfa" stroke="#0d9488" stroke-width="1.5"/>
+<text x="785" y="1490" font-size="11" fill="#334155">Employee / RBAC action</text>
+
+</svg>
