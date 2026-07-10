@@ -382,7 +382,7 @@ function CredentialsForm({ onCreated, onSwitch }: CredentialsFormProps) {
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <Field label="Email ID *" type="email" placeholder="name@company.com" required
           value={email} onChange={(e) => setEmail(e.target.value)} />
-        <PhoneInput value={mobile} onChange={setMobile} />
+        <PhoneInput onChange={setMobile} />
         <Field label="Password *" type="password" placeholder="At least 6 characters" required minLength={6}
           value={password} onChange={(e) => setPassword(e.target.value)} />
         {error && <p style={{ margin: 0, fontSize: 12, color: "#a32d2d" }}>{error}</p>}
