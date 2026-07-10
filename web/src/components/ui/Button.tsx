@@ -14,7 +14,7 @@ export function Button({
   const styles: Record<Variant, string> = {
     primary: disabled
       ? "bg-[#ececea] text-[#b4b2a9] cursor-not-allowed"
-      : "bg-gradient-to-br from-[#1a3a5c] to-[#2563eb] text-white shadow-[0_4px_14px_rgba(37,99,235,0.32)] hover:opacity-90 active:opacity-80",
+      : "bg-[#1a1a18] text-white hover:bg-[#2d2d2a] active:bg-[#111110]",
     secondary:
       "border border-border-strong bg-transparent text-text-primary hover:bg-surface-1 active:bg-surface-0",
     danger: disabled

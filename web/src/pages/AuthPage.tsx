@@ -9,35 +9,76 @@ import { LiveRunView, type RunStage } from "../components/ui/LiveRunView";
 import { type VendorFormValues, vendorFormSchema, TAX_ID_HINTS } from "../lib/vendorSchema";
 import { REQUIRED_DOCUMENTS, uploadDocument, type DocumentRef } from "../lib/documents";
 
-// ─── Brand panel ────────────────────────────────────────────────────────────
+// ─── Left brand panel (sign-in only) ────────────────────────────────────────
+
+const STEPS = [
+  { num: 1, color: "#2563eb", label: "Submit details", sub: "Company, tax ID, bank info" },
+  { num: 2, color: "#7c3aed", label: "Document check", sub: "Gemini extracts and cross-checks" },
+  { num: 3, color: "#059669", label: "Automated decision", sub: "Approved, pending, or rejected" },
+  { num: 4, color: "#d97706", label: "Notification sent", sub: "Email with status and next steps" },
+];
 
 function BrandPanel() {
   return (
-    <div className="hidden flex-col justify-between bg-fill-primary p-10 text-on-primary md:flex md:w-[340px] md:shrink-0">
-      <div className="flex items-center gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-on-primary text-fill-primary">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M4 12l6 6L20 6"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+    <div style={{
+      width: 380, flexShrink: 0,
+      background: "#0f1b2e",
+      display: "flex", flexDirection: "column",
+      padding: "40px 36px",
+      position: "relative", overflow: "hidden",
+    }}>
+      {/* Decorative blob */}
+      <div style={{
+        position: "absolute", bottom: -80, left: -80,
+        width: 320, height: 320, borderRadius: "50%",
+        background: "radial-gradient(circle, rgba(37,99,235,0.18) 0%, transparent 70%)",
+        pointerEvents: "none",
+      }} />
+
+      {/* Logo */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 48 }}>
+        <div style={{
+          width: 32, height: 32, borderRadius: 8, background: "#fff",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M4 12l6 6L20 6" stroke="#0f1b2e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-        <span className="text-[13px] font-medium tracking-tight">Vendor Onboarding</span>
+        <span style={{ color: "#fff", fontSize: 14, fontWeight: 600 }}>Vendor Onboarding</span>
       </div>
-      <div>
-        <p className="mb-3 max-w-[280px] text-2xl leading-snug font-medium">
+
+      {/* Hero text */}
+      <div style={{ flex: 1 }}>
+        <h2 style={{ color: "#fff", fontSize: 28, fontWeight: 700, lineHeight: 1.25, margin: "0 0 16px" }}>
           Automated vendor verification, start to finish.
+        </h2>
+        <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, lineHeight: 1.6, margin: "0 0 40px" }}>
+          Submit your details once. We check your documents, verify your identity, and keep you posted at every step.
         </p>
-        <p className="max-w-[260px] text-[13px] text-on-primary/70">
-          Submit your details once. We check your documents, verify your identity, and keep you
-          posted at every step — with a real audit trail behind every decision.
-        </p>
+
+        {/* Steps */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {STEPS.map((s) => (
+            <div key={s.num} style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: "50%",
+                background: s.color, flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 12, fontWeight: 700, color: "#fff",
+              }}>{s.num}</div>
+              <div>
+                <p style={{ margin: 0, color: "#fff", fontSize: 13, fontWeight: 600 }}>{s.label}</p>
+                <p style={{ margin: "2px 0 0", color: "rgba(255,255,255,0.45)", fontSize: 12 }}>{s.sub}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-      <p className="text-[11px] text-on-primary/50">Zamp · Vendor Onboarding</p>
+
+      <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, marginTop: 40 }}>
+        Zamp · PS-2 · Vendor Onboarding
+      </p>
     </div>
   );
 }
@@ -65,36 +106,45 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
   }
 
   return (
-    <div className="w-full max-w-[400px]">
-      <p className="mb-1 text-base font-medium">Welcome back</p>
-      <p className="mb-6 text-[13px] text-text-secondary">
+    <div style={{ width: "100%", maxWidth: 420 }}>
+      {/* Segmented control */}
+      <div style={{
+        display: "flex", background: "#e8e4db", borderRadius: 10, padding: 4,
+        marginBottom: 32,
+      }}>
+        <button style={{
+          flex: 1, height: 36, borderRadius: 7, border: "none", cursor: "pointer",
+          background: "#1a1a18", color: "#fff", fontSize: 13, fontWeight: 600,
+        }}>Sign in</button>
+        <button onClick={onSwitch} style={{
+          flex: 1, height: 36, borderRadius: 7, border: "none", cursor: "pointer",
+          background: "transparent", color: "#5f5e5a", fontSize: 13, fontWeight: 500,
+        }}>Create account</button>
+      </div>
+
+      <h2 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 700 }}>Welcome back</h2>
+      <p style={{ margin: "0 0 24px", fontSize: 13, color: "#5f5e5a" }}>
         Sign in to view or update your vendor profile.
       </p>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <Field
-          label="Email"
-          type="email"
-          placeholder="name@company.com"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <Field
-          label="Password"
-          type="password"
-          placeholder="••••••••"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        {error && <p className="text-[12px] text-text-danger">{error}</p>}
-        <Button type="submit" variant="primary" disabled={submitting} className="mt-1 w-full">
+
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <Field label="Email" type="email" placeholder="name@company.com" required
+          value={email} onChange={(e) => setEmail(e.target.value)} />
+        <Field label="Password" type="password" placeholder="••••••••" required
+          value={password} onChange={(e) => setPassword(e.target.value)} />
+        {error && <p style={{ margin: 0, fontSize: 12, color: "#a32d2d" }}>{error}</p>}
+        <button type="submit" disabled={submitting} style={{
+          height: 44, borderRadius: 10, border: "none", cursor: submitting ? "not-allowed" : "pointer",
+          background: submitting ? "#ccc" : "#1a1a18", color: "#fff",
+          fontSize: 14, fontWeight: 600, marginTop: 4,
+        }}>
           {submitting ? "Signing in…" : "Sign in"}
-        </Button>
+        </button>
       </form>
-      <p className="mt-5 text-[12px] text-text-muted">
+
+      <p style={{ marginTop: 20, fontSize: 12, color: "#888780", textAlign: "center" }}>
         New vendor?{" "}
-        <button onClick={onSwitch} className="text-text-accent hover:underline">
+        <button onClick={onSwitch} style={{ background: "none", border: "none", cursor: "pointer", color: "#185fa5", fontWeight: 500, fontSize: 12 }}>
           Create an account
         </button>
       </p>
@@ -102,7 +152,7 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
   );
 }
 
-// ─── Sign-up: step 1 — credentials ──────────────────────────────────────────
+// ─── Sign-up step 1: credentials ────────────────────────────────────────────
 
 interface CredentialsFormProps {
   onCreated: (email: string, mobile: string) => void;
@@ -122,8 +172,7 @@ function CredentialsForm({ onCreated, onSwitch }: CredentialsFormProps) {
     setSubmitting(true);
     try {
       const { error, data } = await supabase.auth.signUp({
-        email,
-        password,
+        email, password,
         options: { emailRedirectTo: window.location.origin, data: { mobile } },
       });
       if (error) throw error;
@@ -141,60 +190,55 @@ function CredentialsForm({ onCreated, onSwitch }: CredentialsFormProps) {
   }
 
   return (
-    <div className="w-full max-w-[400px]">
-      <p className="mb-1 text-base font-medium">Create your account</p>
-      <p className="mb-6 text-[13px] text-text-secondary">
+    <div style={{ width: "100%", maxWidth: 420 }}>
+      {/* Segmented control */}
+      <div style={{
+        display: "flex", background: "#e8e4db", borderRadius: 10, padding: 4,
+        marginBottom: 32,
+      }}>
+        <button onClick={onSwitch} style={{
+          flex: 1, height: 36, borderRadius: 7, border: "none", cursor: "pointer",
+          background: "transparent", color: "#5f5e5a", fontSize: 13, fontWeight: 500,
+        }}>Sign in</button>
+        <button style={{
+          flex: 1, height: 36, borderRadius: 7, border: "none", cursor: "pointer",
+          background: "#1a1a18", color: "#fff", fontSize: 13, fontWeight: 600,
+        }}>Create account</button>
+      </div>
+
+      <h2 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 700 }}>Create your account</h2>
+      <p style={{ margin: "0 0 24px", fontSize: 13, color: "#5f5e5a" }}>
         Start with your login credentials. You'll fill in your company details next.
       </p>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <Field
-          label="Email"
-          type="email"
-          placeholder="name@company.com"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <Field
-          label="Mobile number"
-          type="tel"
-          placeholder="+91 98765 43210"
-          required
-          value={mobile}
-          onChange={(e) => setMobile(e.target.value)}
-        />
-        <Field
-          label="Password"
-          type="password"
-          placeholder="At least 6 characters"
-          required
-          minLength={6}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        {error && <p className="text-[12px] text-text-danger">{error}</p>}
-        <Button type="submit" variant="primary" disabled={submitting} className="mt-1 w-full">
+
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <Field label="Email *" type="email" placeholder="name@company.com" required
+          value={email} onChange={(e) => setEmail(e.target.value)} />
+        <Field label="Mobile number *" type="tel" placeholder="+91 98765 43210" required
+          value={mobile} onChange={(e) => setMobile(e.target.value)} />
+        <Field label="Password *" type="password" placeholder="At least 6 characters" required minLength={6}
+          value={password} onChange={(e) => setPassword(e.target.value)} />
+        {error && <p style={{ margin: 0, fontSize: 12, color: "#a32d2d" }}>{error}</p>}
+        <button type="submit" disabled={submitting} style={{
+          height: 44, borderRadius: 10, border: "none", cursor: submitting ? "not-allowed" : "pointer",
+          background: submitting ? "#ccc" : "#1a1a18", color: "#fff",
+          fontSize: 14, fontWeight: 600, marginTop: 4,
+        }}>
           {submitting ? "Creating account…" : "Continue"}
-        </Button>
-      </form>
-      <p className="mt-5 text-[12px] text-text-muted">
-        Already have an account?{" "}
-        <button onClick={onSwitch} className="text-text-accent hover:underline">
-          Sign in
         </button>
-      </p>
+      </form>
     </div>
   );
 }
 
-// ─── Sign-up: step 2 — vendor onboarding form ────────────────────────────────
+// ─── Sign-up step 2: vendor form ─────────────────────────────────────────────
 
 const RUN_STAGES: RunStage[] = [
-  { key: "account", label: "Verifying your account" },
-  { key: "documents", label: "Checking submitted documents" },
-  { key: "extract", label: "Cross-checking details against your documents" },
-  { key: "decide", label: "Applying decision rules" },
-  { key: "notify", label: "Sending notification" },
+  { key: "account", label: "Verifying your account", sub: "Session and profile confirmed" },
+  { key: "documents", label: "Checking submitted documents", sub: "All required docs present and readable" },
+  { key: "extract", label: "Cross-checking details against documents", sub: "Gemini extracted and compared all fields" },
+  { key: "decide", label: "Applying decision rules", sub: "Running decision engine" },
+  { key: "notify", label: "Notification sent", sub: "Email dispatched to contact address" },
 ];
 
 interface SubmitResult {
@@ -204,12 +248,7 @@ interface SubmitResult {
   issues?: { message: string }[];
 }
 
-interface VendorFormProps {
-  accountEmail: string;
-  accountMobile: string;
-}
-
-function VendorOnboardingForm({ accountEmail, accountMobile }: VendorFormProps) {
+function VendorOnboardingForm({ accountEmail, accountMobile }: { accountEmail: string; accountMobile: string }) {
   const [docs, setDocs] = useState<Record<string, DocumentRef>>({});
   const [uploading, setUploading] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -217,9 +256,7 @@ function VendorOnboardingForm({ accountEmail, accountMobile }: VendorFormProps) 
   const [done, setDone] = useState(false);
 
   const {
-    register,
-    handleSubmit,
-    watch,
+    register, handleSubmit, watch,
     formState: { errors, isValid },
   } = useForm<VendorFormValues>({
     resolver: zodResolver(vendorFormSchema),
@@ -251,13 +288,7 @@ function VendorOnboardingForm({ accountEmail, accountMobile }: VendorFormProps) 
       legal_name: values.legal_name,
       trading_name: values.trading_name || null,
       country: values.country,
-      address: {
-        street: values.street,
-        city: values.city,
-        region: values.region,
-        postal_code: values.postal_code,
-        country: values.country,
-      },
+      address: { street: values.street, city: values.city, region: values.region, postal_code: values.postal_code, country: values.country },
       tax_id: values.tax_id,
       pan: values.country === "IN" ? values.pan : null,
       bank_name: values.bank_name,
@@ -275,11 +306,10 @@ function VendorOnboardingForm({ accountEmail, accountMobile }: VendorFormProps) 
 
   if (done) {
     return (
-      <div className="w-full max-w-[560px] py-10 text-center">
-        <p className="mb-2 text-base font-medium">You're all set</p>
-        <p className="text-[13px] text-text-secondary">
-          Your submission has been reviewed. You can now sign in any time to check your status or
-          update your details.
+      <div style={{ textAlign: "center", padding: "40px 0" }}>
+        <p style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>You're all set</p>
+        <p style={{ fontSize: 13, color: "#5f5e5a" }}>
+          Your submission has been reviewed. Sign in any time to check your status.
         </p>
       </div>
     );
@@ -287,210 +317,160 @@ function VendorOnboardingForm({ accountEmail, accountMobile }: VendorFormProps) 
 
   if (pendingPayload) {
     return (
-      <div className="w-full max-w-[560px]">
-        <p className="mb-1 text-base font-medium">Processing your submission</p>
-        <p className="mb-6 text-[13px] text-text-secondary">
+      <div>
+        <h2 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 700 }}>Processing your submission</h2>
+        <p style={{ margin: "0 0 24px", fontSize: 13, color: "#5f5e5a" }}>
           Hang tight — we're extracting and cross-checking your documents now.
         </p>
-        <LiveRunView<SubmitResult>
-          stages={RUN_STAGES}
-          run={() => api.post<SubmitResult>("/vendors/submit", pendingPayload)}
-          onSettled={() => {}}
-          renderResult={(result) => (
-            <div>
-              <p className="mb-1 text-sm font-medium">
-                {result.status === "verification_pending"
-                  ? "Confirmation email sent"
-                  : `Status: ${result.status}`}
-              </p>
-              <p className="mb-3 text-[13px] text-text-secondary">
-                {result.message ?? result.reasoning ?? ""}
-              </p>
-              {result.issues && result.issues.length > 0 && (
-                <ul className="mb-3 list-disc pl-5 text-[13px] text-text-secondary">
-                  {result.issues.map((issue, i) => (
-                    <li key={i}>{issue.message}</li>
-                  ))}
-                </ul>
-              )}
-              <Button
-                variant="primary"
-                onClick={() => {
-                  sessionStorage.removeItem("new_signup");
-                  setDone(true);
-                }}
-              >
-                Done
-              </Button>
-            </div>
-          )}
-        />
+        <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #d8d4cb", padding: 24 }}>
+          <LiveRunView<SubmitResult>
+            stages={RUN_STAGES}
+            run={() => api.post<SubmitResult>("/vendors/submit", pendingPayload)}
+            onSettled={() => {}}
+            renderResult={(result) => (
+              <div>
+                <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>
+                  {result.status === "verification_pending" ? "Confirmation email sent" : `Status: ${result.status}`}
+                </p>
+                <p style={{ fontSize: 13, color: "#5f5e5a", marginBottom: 12 }}>
+                  {result.message ?? result.reasoning ?? ""}
+                </p>
+                {result.issues && result.issues.length > 0 && (
+                  <ul style={{ paddingLeft: 20, marginBottom: 12 }}>
+                    {result.issues.map((issue, i) => (
+                      <li key={i} style={{ fontSize: 13, color: "#5f5e5a" }}>{issue.message}</li>
+                    ))}
+                  </ul>
+                )}
+                <button onClick={() => { sessionStorage.removeItem("new_signup"); setDone(true); }} style={{
+                  height: 40, borderRadius: 9, border: "none", cursor: "pointer",
+                  background: "#1a1a18", color: "#fff", fontSize: 13, fontWeight: 600, padding: "0 20px",
+                }}>Done</button>
+              </div>
+            )}
+          />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-[560px]">
-      <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-fill-primary text-[11px] font-medium text-on-primary">
-          2
+    <div>
+      {/* Progress bar */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, opacity: 0.5 }}>
+          <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </div>
+          <span style={{ fontSize: 12, color: "#5f5e5a" }}>Account created</span>
         </div>
-        <div>
-          <p className="text-base font-medium">Tell us about your company</p>
-          <p className="text-[13px] text-text-secondary">
-            Fields are validated as you type. Upload documents to enable submit.
-          </p>
+        <div style={{ flex: 1, height: 2, background: "#c4bfb4" }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#1a1a18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff" }}>2</div>
+          <span style={{ fontSize: 12, fontWeight: 600 }}>Company details</span>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
-        {/* Company details */}
-        <section>
-          <SectionLabel>Company details</SectionLabel>
-          <div className="grid grid-cols-2 gap-3">
-            <Field
-              label="Legal company name"
-              {...register("legal_name")}
-              error={errors.legal_name?.message}
-            />
-            <Field
-              label="Trading name (optional)"
-              {...register("trading_name")}
-              error={errors.trading_name?.message}
-            />
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <Field
-              label="Street address"
-              {...register("street")}
-              error={errors.street?.message}
-            />
-            <Field label="City" {...register("city")} error={errors.city?.message} />
-            <Field label="State / region" {...register("region")} error={errors.region?.message} />
-            <Field label="Postal code" {...register("postal_code")} error={errors.postal_code?.message} />
-          </div>
-        </section>
+      <h2 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 700 }}>Tell us about your company</h2>
+      <p style={{ margin: "0 0 20px", fontSize: 13, color: "#5f5e5a" }}>
+        Fields are validated as you type. Upload all required documents to enable submit.
+      </p>
 
-        {/* Tax identification */}
-        <section>
-          <SectionLabel>Tax identification</SectionLabel>
-          <SelectField label="Country of registration" {...register("country")}>
-            <option value="IN">India</option>
-            <option value="US">United States</option>
-            <option value="UK">United Kingdom</option>
-          </SelectField>
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <Field
-              label={country === "US" ? "EIN" : country === "UK" ? "VAT number" : "GSTIN"}
-              hint={TAX_ID_HINTS[country]}
-              {...register("tax_id")}
-              error={errors.tax_id?.message}
-            />
-            {country === "IN" && (
+      <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #d8d4cb", padding: 28 }}>
+        <form onSubmit={handleSubmit(onSubmit)} style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          <section>
+            <SectionLabel>Company details</SectionLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <Field label="Legal company name *" {...register("legal_name")} error={errors.legal_name?.message} />
+              <Field label="Trading name (optional)" {...register("trading_name")} error={errors.trading_name?.message} />
+              <Field label="Street address *" {...register("street")} error={errors.street?.message} />
+              <Field label="City *" {...register("city")} error={errors.city?.message} />
+              <Field label="State / region *" {...register("region")} error={errors.region?.message} />
+              <Field label="Postal code *" {...register("postal_code")} error={errors.postal_code?.message} />
+            </div>
+          </section>
+
+          <section>
+            <SectionLabel>Tax identification</SectionLabel>
+            <SelectField label="Country of registration *" {...register("country")}>
+              <option value="IN">India</option>
+              <option value="US">United States</option>
+              <option value="UK">United Kingdom</option>
+            </SelectField>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
               <Field
-                label="Company PAN"
-                hint="Format: AAAAA9999A"
-                {...register("pan")}
-                error={errors.pan?.message}
+                label={`${country === "US" ? "EIN" : country === "UK" ? "VAT number" : "GSTIN"} *`}
+                hint={TAX_ID_HINTS[country]}
+                {...register("tax_id")}
+                error={errors.tax_id?.message}
               />
+              {country === "IN" && (
+                <Field label="Company PAN *" hint="Format: AAAAA9999A" {...register("pan")} error={errors.pan?.message} />
+              )}
+            </div>
+          </section>
+
+          <section>
+            <SectionLabel>Bank details</SectionLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <Field label="Bank name *" {...register("bank_name")} error={errors.bank_name?.message} />
+              <Field label="Account holder name *" {...register("bank_account_holder_name")} error={errors.bank_account_holder_name?.message} />
+              <Field label="Account number / IBAN *" {...register("bank_account_number")} error={errors.bank_account_number?.message} />
+              <Field label="Routing / SWIFT-BIC *" {...register("bank_routing_number")} error={errors.bank_routing_number?.message} />
+            </div>
+          </section>
+
+          <section>
+            <SectionLabel>Contact details</SectionLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <Field label="Primary contact name *" {...register("contact_name")} error={errors.contact_name?.message} />
+              <Field label="Contact email *" type="email" {...register("contact_email")} error={errors.contact_email?.message} />
+              <Field label="Phone (optional)" {...register("contact_phone")} />
+            </div>
+          </section>
+
+          <section>
+            <SectionLabel>Documents</SectionLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+              {requiredDocs.map((d) => {
+                const isUploaded = !!docs[d.type];
+                const isUploading = uploading === d.type;
+                return (
+                  <label key={d.type} style={{
+                    cursor: "pointer", borderRadius: 9, border: `1.5px dashed ${isUploaded ? "#16a34a" : "#c4bfb4"}`,
+                    padding: "14px 12px", textAlign: "center",
+                    background: isUploaded ? "#f0fdf4" : "#faf9f6",
+                  }}>
+                    <input type="file" accept="application/pdf,image/*" style={{ display: "none" }}
+                      onChange={(e) => handleFileChange(d.type, e.target.files?.[0] ?? null)} />
+                    <p style={{ fontSize: 11, margin: 0, color: isUploaded ? "#14532d" : "#888780" }}>
+                      {isUploading ? "Uploading…" : isUploaded ? "Uploaded ✓" : d.label}
+                    </p>
+                  </label>
+                );
+              })}
+            </div>
+          </section>
+
+          {submitError && <p style={{ fontSize: 13, color: "#a32d2d", margin: 0 }}>{submitError}</p>}
+
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid #d8d4cb", paddingTop: 16 }}>
+            {!canSubmit && (
+              <p style={{ fontSize: 12, color: "#a32d2d", margin: 0 }}>
+                {uploading ? "Uploading document…" : !allDocsUploaded ? "Upload all required documents to continue" : "Fix the flagged fields above"}
+              </p>
             )}
+            <button type="submit" disabled={!canSubmit} style={{
+              marginLeft: "auto", height: 42, borderRadius: 9, border: "none",
+              cursor: canSubmit ? "pointer" : "not-allowed",
+              background: canSubmit ? "#1a1a18" : "#ececea", color: canSubmit ? "#fff" : "#b4b2a9",
+              fontSize: 13, fontWeight: 600, padding: "0 24px",
+            }}>
+              Submit for review
+            </button>
           </div>
-        </section>
-
-        {/* Bank details */}
-        <section>
-          <SectionLabel>Bank details</SectionLabel>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Bank name" {...register("bank_name")} error={errors.bank_name?.message} />
-            <Field
-              label="Account holder name"
-              {...register("bank_account_holder_name")}
-              error={errors.bank_account_holder_name?.message}
-            />
-            <Field
-              label="Account number / IBAN"
-              {...register("bank_account_number")}
-              error={errors.bank_account_number?.message}
-            />
-            <Field
-              label="Routing / SWIFT-BIC"
-              {...register("bank_routing_number")}
-              error={errors.bank_routing_number?.message}
-            />
-          </div>
-        </section>
-
-        {/* Contact details */}
-        <section>
-          <SectionLabel>Contact details</SectionLabel>
-          <div className="grid grid-cols-2 gap-3">
-            <Field
-              label="Primary contact name"
-              {...register("contact_name")}
-              error={errors.contact_name?.message}
-            />
-            <Field
-              label="Contact email"
-              type="email"
-              {...register("contact_email")}
-              error={errors.contact_email?.message}
-            />
-            <Field label="Phone (optional)" {...register("contact_phone")} />
-          </div>
-        </section>
-
-        {/* Documents */}
-        <section>
-          <SectionLabel>Documents</SectionLabel>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-            {requiredDocs.map((d) => {
-              const isUploaded = !!docs[d.type];
-              const isUploading = uploading === d.type;
-              return (
-                <label
-                  key={d.type}
-                  className={`cursor-pointer rounded-[var(--radius-control)] border border-dashed p-3.5 text-center transition-colors ${
-                    isUploaded
-                      ? "border-status-approved-border bg-status-approved-bg"
-                      : "border-border-strong hover:bg-surface-1"
-                  }`}
-                >
-                  <input
-                    type="file"
-                    accept="application/pdf,image/*"
-                    className="hidden"
-                    onChange={(e) => handleFileChange(d.type, e.target.files?.[0] ?? null)}
-                  />
-                  <p
-                    className={`text-[11px] ${
-                      isUploaded ? "text-text-success" : "text-text-muted"
-                    }`}
-                  >
-                    {isUploading ? "Uploading…" : isUploaded ? "Uploaded ✓" : d.label}
-                  </p>
-                </label>
-              );
-            })}
-          </div>
-        </section>
-
-        {submitError && <p className="text-[13px] text-text-danger">{submitError}</p>}
-
-        <div className="flex items-center justify-between border-t border-border pt-4">
-          {!canSubmit && (
-            <p className="text-[12px] text-text-danger">
-              {uploading
-                ? "Uploading document…"
-                : !allDocsUploaded
-                ? "Upload all required documents to continue"
-                : "Fix the flagged fields above"}
-            </p>
-          )}
-          <Button type="submit" variant="primary" disabled={!canSubmit} className="ml-auto">
-            Submit for review
-          </Button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }
@@ -510,70 +490,25 @@ export function AuthPage() {
     setView("signup-step2");
   }
 
-  const isWideForm = view === "signup-step2";
+  const showBrandPanel = view === "signin" || view === "signup-step1";
 
   return (
-    <div className="flex min-h-screen">
-      <BrandPanel />
+    <div style={{ display: "flex", minHeight: "100vh" }}>
+      {showBrandPanel && <BrandPanel />}
 
-      {/* Right panel — scrollable, wider when showing the full form */}
-      <div
-        className={`flex flex-1 justify-center overflow-y-auto ${
-          isWideForm ? "items-start py-10 px-6" : "items-center p-6"
-        }`}
-      >
-        {view === "signin" && (
-          <SignInForm onSwitch={() => setView("signup-step1")} />
-        )}
-
-        {view === "signup-step1" && (
-          <div className="w-full max-w-[400px]">
-            {/* Step indicator */}
-            <div className="mb-6 flex items-center gap-2">
-              <div className="flex items-center gap-1.5">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-fill-primary text-[11px] font-medium text-on-primary">
-                  1
-                </div>
-                <span className="text-[12px] font-medium text-text-primary">Account</span>
-              </div>
-              <div className="h-px flex-1 bg-border" />
-              <div className="flex items-center gap-1.5 opacity-40">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full border border-border text-[11px] text-text-muted">
-                  2
-                </div>
-                <span className="text-[12px] text-text-muted">Company details</span>
-              </div>
-            </div>
-
-            <CredentialsForm
-              onCreated={handleAccountCreated}
-              onSwitch={() => setView("signin")}
-            />
-          </div>
-        )}
-
-        {view === "signup-step2" && (
-          <div className="w-full max-w-[560px]">
-            {/* Step indicator */}
-            <div className="mb-8 flex items-center gap-2">
-              <div className="flex items-center gap-1.5 opacity-40">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full border border-border text-[11px] text-text-muted">
-                  ✓
-                </div>
-                <span className="text-[12px] text-text-muted">Account created</span>
-              </div>
-              <div className="h-px flex-1 bg-border" />
-              <div className="flex items-center gap-1.5">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-fill-primary text-[11px] font-medium text-on-primary">
-                  2
-                </div>
-                <span className="text-[12px] font-medium text-text-primary">Company details</span>
-              </div>
-            </div>
-
-            <VendorOnboardingForm accountEmail={accountEmail} accountMobile={accountMobile} />
-          </div>
-        )}
+      <div style={{
+        flex: 1, display: "flex",
+        justifyContent: "center",
+        alignItems: view === "signup-step2" ? "flex-start" : "center",
+        padding: view === "signup-step2" ? "48px 40px" : "40px 32px",
+        overflowY: "auto",
+        background: "#e8e4db",
+      }}>
+        <div style={{ width: "100%", maxWidth: view === "signup-step2" ? 700 : 420 }}>
+          {view === "signin" && <SignInForm onSwitch={() => setView("signup-step1")} />}
+          {view === "signup-step1" && <CredentialsForm onCreated={handleAccountCreated} onSwitch={() => setView("signin")} />}
+          {view === "signup-step2" && <VendorOnboardingForm accountEmail={accountEmail} accountMobile={accountMobile} />}
+        </div>
       </div>
     </div>
   );
