@@ -151,6 +151,176 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
   );
 }
 
+// ─── Country dial-code picker data ───────────────────────────────────────────
+
+interface DialCountry {
+  code: string;   // ISO-2
+  name: string;
+  dial: string;   // e.g. "+91"
+  flag: string;   // emoji
+  search: string; // lowercase search tokens
+}
+
+const DIAL_COUNTRIES: DialCountry[] = [
+  { code: "IN", name: "India",          dial: "+91",  flag: "🇮🇳", search: "india ind in" },
+  { code: "US", name: "United States",  dial: "+1",   flag: "🇺🇸", search: "united states usa us america" },
+  { code: "GB", name: "United Kingdom", dial: "+44",  flag: "🇬🇧", search: "united kingdom uk gb britain england" },
+  { code: "AU", name: "Australia",      dial: "+61",  flag: "🇦🇺", search: "australia aus" },
+  { code: "CA", name: "Canada",         dial: "+1",   flag: "🇨🇦", search: "canada can" },
+  { code: "SG", name: "Singapore",      dial: "+65",  flag: "🇸🇬", search: "singapore sgp sg" },
+  { code: "AE", name: "UAE",            dial: "+971", flag: "🇦🇪", search: "uae united arab emirates dubai" },
+  { code: "DE", name: "Germany",        dial: "+49",  flag: "🇩🇪", search: "germany deu de deutschland" },
+  { code: "FR", name: "France",         dial: "+33",  flag: "🇫🇷", search: "france fra fr" },
+  { code: "JP", name: "Japan",          dial: "+81",  flag: "🇯🇵", search: "japan jpn jp" },
+  { code: "CN", name: "China",          dial: "+86",  flag: "🇨🇳", search: "china chn cn" },
+  { code: "BR", name: "Brazil",         dial: "+55",  flag: "🇧🇷", search: "brazil bra br brasil" },
+  { code: "ZA", name: "South Africa",   dial: "+27",  flag: "🇿🇦", search: "south africa zaf za" },
+  { code: "NG", name: "Nigeria",        dial: "+234", flag: "🇳🇬", search: "nigeria nga ng" },
+  { code: "KE", name: "Kenya",          dial: "+254", flag: "🇰🇪", search: "kenya ken ke" },
+  { code: "MX", name: "Mexico",         dial: "+52",  flag: "🇲🇽", search: "mexico mex mx" },
+  { code: "ID", name: "Indonesia",      dial: "+62",  flag: "🇮🇩", search: "indonesia idn id" },
+  { code: "PK", name: "Pakistan",       dial: "+92",  flag: "🇵🇰", search: "pakistan pak pk" },
+  { code: "BD", name: "Bangladesh",     dial: "+880", flag: "🇧🇩", search: "bangladesh bgd bd" },
+  { code: "NL", name: "Netherlands",    dial: "+31",  flag: "🇳🇱", search: "netherlands nld nl holland" },
+];
+
+// ─── Phone input with country picker ─────────────────────────────────────────
+
+function PhoneInput({
+  value, onChange,
+}: {
+  value: string;
+  onChange: (full: string) => void;
+}) {
+  const [selectedCountry, setSelectedCountry] = useState<DialCountry>(
+    DIAL_COUNTRIES.find((c) => c.code === "IN")!
+  );
+  const [localNumber, setLocalNumber] = useState("");
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  // keep value in sync when country or local number changes
+  const updateFull = (country: DialCountry, num: string) => {
+    onChange(`${country.dial}${num}`);
+  };
+
+  const filtered = query.trim()
+    ? DIAL_COUNTRIES.filter((c) =>
+        c.search.includes(query.toLowerCase()) ||
+        c.dial.includes(query) ||
+        c.name.toLowerCase().includes(query.toLowerCase())
+      )
+    : DIAL_COUNTRIES;
+
+  function selectCountry(c: DialCountry) {
+    setSelectedCountry(c);
+    setOpen(false);
+    setQuery("");
+    updateFull(c, localNumber);
+  }
+
+  function handleNumberChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value.replace(/\D/g, "").slice(0, 15);
+    setLocalNumber(raw);
+    updateFull(selectedCountry, raw);
+  }
+
+  return (
+    <div>
+      <label style={{ display: "block", marginBottom: 4, fontSize: 12, color: "#5f5e5a" }}>
+        Mobile number *
+      </label>
+      <div style={{ display: "flex", gap: 0, position: "relative" }}>
+        {/* Country trigger */}
+        <button type="button" onClick={() => setOpen((o) => !o)} style={{
+          display: "flex", alignItems: "center", gap: 6,
+          height: 40, padding: "0 10px",
+          background: "#fff", border: "1.5px solid #d8d4cb",
+          borderRight: "none",
+          borderRadius: "9px 0 0 9px",
+          cursor: "pointer", flexShrink: 0, minWidth: 88,
+          fontSize: 13, fontWeight: 500,
+        }}>
+          <span style={{ fontSize: 18, lineHeight: 1 }}>{selectedCountry.flag}</span>
+          <span style={{ color: "#5f5e5a" }}>{selectedCountry.dial}</span>
+          <span style={{ marginLeft: "auto", color: "#888780", fontSize: 10 }}>▾</span>
+        </button>
+
+        {/* Number input */}
+        <input
+          type="tel"
+          inputMode="numeric"
+          placeholder="10-digit number"
+          value={localNumber}
+          onChange={handleNumberChange}
+          required
+          style={{
+            flex: 1, height: 40, padding: "0 12px",
+            background: "#fff", border: "1.5px solid #d8d4cb",
+            borderRadius: "0 9px 9px 0",
+            fontSize: 13, boxSizing: "border-box", color: "#1a1a18",
+          }}
+        />
+
+        {/* Dropdown */}
+        {open && (
+          <div style={{
+            position: "absolute", top: "calc(100% + 6px)", left: 0,
+            width: 280, zIndex: 999,
+            background: "#fff", border: "1.5px solid #d8d4cb",
+            borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+            overflow: "hidden",
+          }}>
+            {/* Search box */}
+            <div style={{ padding: "8px 10px", borderBottom: "1px solid #e8e4db" }}>
+              <input
+                autoFocus
+                type="text"
+                placeholder='Search (e.g. "IND", "+91", "India")'
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                style={{
+                  width: "100%", height: 34, padding: "0 10px",
+                  border: "1.5px solid #d8d4cb", borderRadius: 7,
+                  fontSize: 12, boxSizing: "border-box", color: "#1a1a18",
+                  background: "#faf9f6",
+                }}
+              />
+            </div>
+
+            {/* Results */}
+            <div style={{ maxHeight: 220, overflowY: "auto" }}>
+              {filtered.length === 0 && (
+                <p style={{ padding: "12px 14px", margin: 0, fontSize: 12, color: "#888780" }}>
+                  No countries found.
+                </p>
+              )}
+              {filtered.map((c) => (
+                <button key={c.code} type="button" onClick={() => selectCountry(c)} style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  width: "100%", padding: "9px 14px", border: "none",
+                  background: c.code === selectedCountry.code ? "#f0f7ff" : "transparent",
+                  cursor: "pointer", textAlign: "left",
+                }}
+                  onMouseEnter={(e) => { if (c.code !== selectedCountry.code) e.currentTarget.style.background = "#faf9f6"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = c.code === selectedCountry.code ? "#f0f7ff" : "transparent"; }}
+                >
+                  <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{c.flag}</span>
+                  <span style={{ flex: 1, fontSize: 13, color: "#1a1a18" }}>{c.name}</span>
+                  <span style={{ fontSize: 12, color: "#888780", flexShrink: 0 }}>{c.dial}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      {/* Dismiss overlay */}
+      {open && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 998 }} onClick={() => { setOpen(false); setQuery(""); }} />
+      )}
+    </div>
+  );
+}
+
 // ─── Sign-up step 1: credentials ────────────────────────────────────────────
 
 interface CredentialsFormProps {
@@ -211,10 +381,9 @@ function CredentialsForm({ onCreated, onSwitch }: CredentialsFormProps) {
       </p>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <Field label="Email *" type="email" placeholder="name@company.com" required
+        <Field label="Email ID *" type="email" placeholder="name@company.com" required
           value={email} onChange={(e) => setEmail(e.target.value)} />
-        <Field label="Mobile number *" type="tel" placeholder="+91 98765 43210" required
-          value={mobile} onChange={(e) => setMobile(e.target.value)} />
+        <PhoneInput value={mobile} onChange={setMobile} />
         <Field label="Password *" type="password" placeholder="At least 6 characters" required minLength={6}
           value={password} onChange={(e) => setPassword(e.target.value)} />
         {error && <p style={{ margin: 0, fontSize: 12, color: "#a32d2d" }}>{error}</p>}
