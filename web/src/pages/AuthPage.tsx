@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "../lib/supabase";
 import { api } from "../lib/api";
-import { Button } from "../components/ui/Button";
 import { Field, SelectField, SectionLabel } from "../components/ui/Field";
 import { LiveRunView, type RunStage } from "../components/ui/LiveRunView";
 import { type VendorFormValues, vendorFormSchema, TAX_ID_HINTS } from "../lib/vendorSchema";
