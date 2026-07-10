@@ -187,9 +187,8 @@ const DIAL_COUNTRIES: DialCountry[] = [
 // ─── Phone input with country picker ─────────────────────────────────────────
 
 function PhoneInput({
-  value, onChange,
+  onChange,
 }: {
-  value: string;
   onChange: (full: string) => void;
 }) {
   const [selectedCountry, setSelectedCountry] = useState<DialCountry>(
