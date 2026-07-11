@@ -1,10 +1,13 @@
 import json
 import mimetypes
+from concurrent.futures import ThreadPoolExecutor
 
 from google import genai
 from google.genai import types
 
 from app.config import get_settings
+
+_executor = ThreadPoolExecutor(max_workers=4)
 
 EXTRACTION_SCHEMA = types.Schema(
     type=types.Type.OBJECT,
@@ -28,37 +31,26 @@ registration number / GSTIN / EIN / VAT number printed, bank account holder name
 bank account number, and bank name."""
 
 
-_gemini_client: genai.Client | None = None
-
-
-def _client() -> genai.Client:
-    global _gemini_client
-    if _gemini_client is None:
-        _gemini_client = genai.Client(api_key=get_settings().gemini_api_key)
-    return _gemini_client
+def _call_gemini(file_bytes: bytes, mime_type: str, document_type: str) -> dict:
+    """Runs in a thread pool so it gets a clean event-loop context.
+    The genai sync client internally calls asyncio which conflicts with
+    FastAPI's running event loop when invoked directly from an async handler."""
+    client = genai.Client(api_key=get_settings().gemini_api_key)
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=[
+            types.Part.from_bytes(data=file_bytes, mime_type=mime_type),
+            EXTRACTION_PROMPT.format(doc_type=document_type),
+        ],
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema=EXTRACTION_SCHEMA,
+        ),
+    )
+    return json.loads(response.text)
 
 
 def extract_document(file_bytes: bytes, filename: str, document_type: str) -> dict:
-    global _gemini_client
     mime_type = mimetypes.guess_type(filename)[0] or "application/pdf"
-
-    for attempt in range(2):
-        try:
-            response = _client().models.generate_content(
-                model="gemini-2.5-flash",
-                contents=[
-                    types.Part.from_bytes(data=file_bytes, mime_type=mime_type),
-                    EXTRACTION_PROMPT.format(doc_type=document_type),
-                ],
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=EXTRACTION_SCHEMA,
-                ),
-            )
-            return json.loads(response.text)
-        except Exception as e:
-            if attempt == 0 and "closed" in str(e).lower():
-                # httpx client closed — force recreate and retry once
-                _gemini_client = None
-            else:
-                raise
+    future = _executor.submit(_call_gemini, file_bytes, mime_type, document_type)
+    return future.result(timeout=120)
