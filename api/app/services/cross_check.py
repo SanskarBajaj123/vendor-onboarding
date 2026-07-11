@@ -134,4 +134,37 @@ def run_layer_2(submission: VendorSubmission, vendor_id: str) -> tuple[list[Issu
                 )
             )
 
+    # 7. Bank account number: form vs. bank confirmation letter (exact match — identity field)
+    if bank_letter and bank_letter.get("account_number") and submission.bank_account_number:
+        letter_acc = bank_letter["account_number"].strip().replace(" ", "").replace("-", "")
+        form_acc = submission.bank_account_number.strip().replace(" ", "").replace("-", "")
+        if letter_acc != form_acc:
+            issues.append(
+                Issue(
+                    type="bank_account_mismatch",
+                    severity="soft",
+                    message=(
+                        f"Bank account number on the form ('{submission.bank_account_number}') "
+                        f"does not match the account number on the bank confirmation letter "
+                        f"('{bank_letter['account_number']}')."
+                    ),
+                    field="bank_account_number",
+                )
+            )
+
+    # 8. Bank name: form vs. bank confirmation letter (fuzzy — "HDFC" vs "HDFC Bank" is fine)
+    if bank_letter and bank_letter.get("bank_name") and submission.bank_name:
+        if not names_match(submission.bank_name, bank_letter["bank_name"]):
+            issues.append(
+                Issue(
+                    type="bank_name_mismatch",
+                    severity="soft",
+                    message=(
+                        f"Bank name on the form ('{submission.bank_name}') does not match the "
+                        f"bank name on the bank confirmation letter ('{bank_letter['bank_name']}')."
+                    ),
+                    field="bank_name",
+                )
+            )
+
     return issues, extracted_by_type
