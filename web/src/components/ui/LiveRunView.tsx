@@ -13,6 +13,7 @@ interface LiveRunViewProps<T> {
   run: () => Promise<T>;
   onSettled?: (result: T | null, error: unknown) => void;
   renderResult: (result: T) => React.ReactNode;
+  onBack?: () => void;
   minStageMs?: number;
 }
 
@@ -74,6 +75,7 @@ export function LiveRunView<T>({
   run,
   onSettled,
   renderResult,
+  onBack,
   minStageMs = 600,
 }: LiveRunViewProps<T>) {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -169,9 +171,20 @@ export function LiveRunView<T>({
           marginTop: 20, padding: 16, borderRadius: 12,
           background: "#fef2f2", border: "1.5px solid #fca5a5",
         }}>
-          <p style={{ margin: 0, fontSize: 13, color: "#7f1d1d" }}>
+          <p style={{ margin: "0 0 12px", fontSize: 13, color: "#7f1d1d" }}>
             {error instanceof Error ? error.message : "Something went wrong."}
           </p>
+          {onBack && (
+            <button
+              onClick={onBack}
+              style={{
+                fontSize: 13, fontWeight: 600, padding: "7px 16px", borderRadius: 8,
+                background: "#1a1a18", color: "#fff", border: "none", cursor: "pointer",
+              }}
+            >
+              ← Back to form
+            </button>
+          )}
         </div>
       )}
 

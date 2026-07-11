@@ -286,6 +286,7 @@ export function OnboardingPage() {
             stages={RUN_STAGES}
             run={() => api.post<SubmitResult>("/vendors/submit", pendingPayload)}
             onSettled={(result) => { if (result) loadExisting(); }}
+            onBack={() => setPendingPayload(null)}
             renderResult={(result) => (
               <div>
                 <p style={{ margin: "0 0 6px", fontSize: 14, fontWeight: 600 }}>
