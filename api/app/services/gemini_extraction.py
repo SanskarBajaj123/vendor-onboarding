@@ -28,22 +28,37 @@ registration number / GSTIN / EIN / VAT number printed, bank account holder name
 bank account number, and bank name."""
 
 
+_gemini_client: genai.Client | None = None
+
+
 def _client() -> genai.Client:
-    return genai.Client(api_key=get_settings().gemini_api_key)
+    global _gemini_client
+    if _gemini_client is None:
+        _gemini_client = genai.Client(api_key=get_settings().gemini_api_key)
+    return _gemini_client
 
 
 def extract_document(file_bytes: bytes, filename: str, document_type: str) -> dict:
+    global _gemini_client
     mime_type = mimetypes.guess_type(filename)[0] or "application/pdf"
 
-    response = _client().models.generate_content(
-        model="gemini-2.5-flash",
-        contents=[
-            types.Part.from_bytes(data=file_bytes, mime_type=mime_type),
-            EXTRACTION_PROMPT.format(doc_type=document_type),
-        ],
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=EXTRACTION_SCHEMA,
-        ),
-    )
-    return json.loads(response.text)
+    for attempt in range(2):
+        try:
+            response = _client().models.generate_content(
+                model="gemini-2.5-flash",
+                contents=[
+                    types.Part.from_bytes(data=file_bytes, mime_type=mime_type),
+                    EXTRACTION_PROMPT.format(doc_type=document_type),
+                ],
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=EXTRACTION_SCHEMA,
+                ),
+            )
+            return json.loads(response.text)
+        except Exception as e:
+            if attempt == 0 and "closed" in str(e).lower():
+                # httpx client closed — force recreate and retry once
+                _gemini_client = None
+            else:
+                raise
