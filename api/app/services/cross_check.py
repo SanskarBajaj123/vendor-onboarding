@@ -11,7 +11,7 @@ ID_DOCUMENT_BY_COUNTRY = {
 }
 
 
-def run_layer_2(submission: VendorSubmission, vendor_id: str) -> list[Issue]:
+def run_layer_2(submission: VendorSubmission, vendor_id: str) -> tuple[list[Issue], dict]:
     issues: list[Issue] = []
 
     # 1. Missing required documents for this country
@@ -134,4 +134,4 @@ def run_layer_2(submission: VendorSubmission, vendor_id: str) -> list[Issue]:
                 )
             )
 
-    return issues
+    return issues, extracted_by_type

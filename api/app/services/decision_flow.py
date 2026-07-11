@@ -28,7 +28,7 @@ def run_decision(vendor_id: str, submission: VendorSubmission, previous_status: 
     client = get_service_client()
     settings = get_settings()
 
-    issues = cross_check.run_layer_2(submission, vendor_id)
+    issues, extracted = cross_check.run_layer_2(submission, vendor_id)
     result = decide(issues)
 
     update = {
@@ -52,7 +52,7 @@ def run_decision(vendor_id: str, submission: VendorSubmission, previous_status: 
         previous_status=previous_status,
         new_status=result.status,
         reason=result.reasoning,
-        metadata={"issues": [i.model_dump() for i in result.issues]},
+        metadata={"issues": [i.model_dump() for i in result.issues], "extracted": extracted},
     )
 
     reapply_url = None if result.status == "approved" else f"{settings.frontend_url}/vendor"

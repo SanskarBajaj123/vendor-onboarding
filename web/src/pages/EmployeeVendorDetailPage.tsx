@@ -6,6 +6,16 @@ import { Button } from "../components/ui/Button";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { Shell } from "../components/ui/Shell";
 
+interface ExtractedDoc {
+  legal_name?: string;
+  address?: string;
+  tax_id?: string;
+  account_holder_name?: string;
+  bank_name?: string;
+  account_number?: string;
+  [key: string]: string | undefined;
+}
+
 interface AuditEntry {
   id: string;
   actor_type: string;
@@ -14,6 +24,10 @@ interface AuditEntry {
   new_status: string | null;
   reason: string | null;
   created_at: string;
+  metadata?: {
+    issues?: { type: string; severity: string; message: string; field: string }[];
+    extracted?: Record<string, ExtractedDoc>;
+  } | null;
 }
 
 interface VendorDetail {
@@ -165,6 +179,34 @@ export function EmployeeVendorDetailPage() {
                   : ""}
               </p>
               {entry.reason && <p className="text-[13px] text-text-secondary">{entry.reason}</p>}
+
+              {/* Gemini extraction log — only on automated_decision entries */}
+              {entry.action === "automated_decision" && entry.metadata?.extracted && (
+                <details style={{ marginTop: 10 }}>
+                  <summary style={{ fontSize: 12, color: "#6366f1", cursor: "pointer", fontWeight: 500, userSelect: "none" }}>
+                    Gemini extraction log ({Object.keys(entry.metadata.extracted).length} documents)
+                  </summary>
+                  <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>
+                    {Object.entries(entry.metadata.extracted).map(([docType, fields]) => (
+                      <div key={docType} style={{ background: "#f7f6f2", borderRadius: 8, padding: "10px 14px" }}>
+                        <p style={{ margin: "0 0 6px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#888780" }}>
+                          {docType.replace(/_/g, " ")}
+                        </p>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                          {Object.entries(fields ?? {}).map(([k, v]) =>
+                            v ? (
+                              <div key={k} style={{ display: "flex", gap: 8, fontSize: 12 }}>
+                                <span style={{ color: "#888780", minWidth: 160 }}>{k.replace(/_/g, " ")}</span>
+                                <span style={{ color: "#1a1a18", fontWeight: 500 }}>{v}</span>
+                              </div>
+                            ) : null
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
             </div>
           ))}
         </div>
