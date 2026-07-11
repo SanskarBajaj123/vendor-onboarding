@@ -1,8 +1,12 @@
+import logging
+
 from app.config import get_settings
 from app.models.vendor import VendorSubmission
 from app.services import audit, cross_check, email_service
 from app.services.decision_engine import decide
 from app.supabase_client import get_service_client
+
+logger = logging.getLogger(__name__)
 
 
 def vendor_row_from_submission(submission: VendorSubmission) -> dict:
@@ -56,12 +60,15 @@ def run_decision(vendor_id: str, submission: VendorSubmission, previous_status: 
     )
 
     reapply_url = None if result.status == "approved" else f"{settings.frontend_url}/vendor"
-    email_service.send_decision_email(
-        to=submission.contact_email,
-        legal_name=submission.legal_name,
-        status=result.status,
-        reasoning=result.reasoning,
-        reapply_url=reapply_url,
-    )
+    try:
+        email_service.send_decision_email(
+            to=submission.contact_email,
+            legal_name=submission.legal_name,
+            status=result.status,
+            reasoning=result.reasoning,
+            reapply_url=reapply_url,
+        )
+    except Exception as e:
+        logger.warning("Email notification failed (decision already committed): %s", e)
 
     return {"status": result.status, "reasoning": result.reasoning, "issues": [i.model_dump() for i in result.issues]}

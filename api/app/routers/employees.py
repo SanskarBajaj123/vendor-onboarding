@@ -1,3 +1,4 @@
+import logging
 from typing import Literal
 
 from fastapi import APIRouter, Depends
@@ -6,6 +7,8 @@ from pydantic import BaseModel
 from app.auth import CurrentUser, require_employee
 from app.services import audit, email_service
 from app.supabase_client import get_service_client
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/employees", tags=["employees"])
 
@@ -84,14 +87,17 @@ async def override_status(
         reason=payload.reason,
     )
 
-    email_service.send_decision_email(
-        to=vendor["current_contact_email"] or vendor["original_email"],
-        legal_name=vendor["legal_name"],
-        status=payload.new_status,
-        reasoning=f"An employee reviewed your submission and set the status to "
-        f"{payload.new_status}. Reason: {payload.reason}",
-        reapply_url=None,
-    )
+    try:
+        email_service.send_decision_email(
+            to=vendor["current_contact_email"] or vendor["original_email"],
+            legal_name=vendor["legal_name"],
+            status=payload.new_status,
+            reasoning=f"An employee reviewed your submission and set the status to "
+            f"{payload.new_status}. Reason: {payload.reason}",
+            reapply_url=None,
+        )
+    except Exception as e:
+        logger.warning("Override notification email failed: %s", e)
 
     return {"status": "ok"}
 

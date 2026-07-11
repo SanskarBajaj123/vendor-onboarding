@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, HTTPException
 
 from app.config import get_settings
@@ -5,6 +7,8 @@ from app.models.vendor import VendorSubmission
 from app.services import audit, email_service, verification_tokens
 from app.services.decision_flow import run_decision, vendor_row_from_submission
 from app.supabase_client import get_service_client
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/verify", tags=["verification"])
 
@@ -22,9 +26,12 @@ async def confirm_verification(token: str):
         return {"status": "already_confirmed", "message": "This link has already been used."}
 
     if verification_tokens.is_expired(token_row):
-        email_service.send_resubmission_rejected_email(
-            token_row["sent_to_email"], vendor["legal_name"], reapply_url_for(vendor)
-        )
+        try:
+            email_service.send_resubmission_rejected_email(
+                token_row["sent_to_email"], vendor["legal_name"], reapply_url_for(vendor)
+            )
+        except Exception as e:
+            logger.warning("Resubmission rejected email failed: %s", e)
         audit.log(
             vendor_id=vendor["id"],
             actor_type="system",
