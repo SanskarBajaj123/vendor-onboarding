@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from app.auth import CurrentUser, require_employee
+from app.config import get_settings
 from app.services import audit, email_service
 from app.supabase_client import get_service_client
 
@@ -87,6 +88,12 @@ async def override_status(
         reason=payload.reason,
     )
 
+    settings = get_settings()
+    reapply_url = (
+        f"{settings.frontend_url}/vendor"
+        if payload.new_status in ("pending", "rejected")
+        else None
+    )
     try:
         email_service.send_decision_email(
             to=vendor["current_contact_email"] or vendor["original_email"],
@@ -94,7 +101,7 @@ async def override_status(
             status=payload.new_status,
             reasoning=f"An employee reviewed your submission and set the status to "
             f"{payload.new_status}. Reason: {payload.reason}",
-            reapply_url=None,
+            reapply_url=reapply_url,
         )
     except Exception as e:
         logger.warning("Override notification email failed: %s", e)

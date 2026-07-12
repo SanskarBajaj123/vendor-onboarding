@@ -90,7 +90,11 @@ export function EmployeeVendorDetailPage() {
     }
   }
 
-  if (!detail) return <div className="p-10 text-sm text-text-secondary">Loading…</div>;
+  if (!detail) return (
+    <Shell eyebrow="Employee view" title="Loading…" maxWidth="1060px">
+      <p style={{ fontSize: 13, color: "#888780" }}>Loading vendor details…</p>
+    </Shell>
+  );
 
   const { vendor, audit_trail } = detail;
 
