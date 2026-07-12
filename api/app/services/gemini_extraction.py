@@ -37,7 +37,7 @@ def _call_gemini(file_bytes: bytes, mime_type: str, document_type: str) -> dict:
     FastAPI's running event loop when invoked directly from an async handler."""
     client = genai.Client(api_key=get_settings().gemini_api_key)
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-2.0-flash",
         contents=[
             types.Part.from_bytes(data=file_bytes, mime_type=mime_type),
             EXTRACTION_PROMPT.format(doc_type=document_type),
