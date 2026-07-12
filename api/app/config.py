@@ -30,6 +30,7 @@ class Settings(BaseSettings):
 
     resend_api_key: str = ""
     resend_from_email: str = "onboarding@resend.dev"
+    resend_to_override: str = ""  # when set, all emails go here (Resend free-tier restriction)
 
     frontend_url: str = "http://localhost:5173"
     environment: str = "development"

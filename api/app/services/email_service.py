@@ -14,10 +14,12 @@ def _ensure_configured() -> None:
 
 def _send(to: str, subject: str, html: str) -> None:
     _ensure_configured()
+    settings = get_settings()
+    recipient = settings.resend_to_override if settings.resend_to_override else to
     resend.Emails.send(
         {
-            "from": get_settings().resend_from_email,
-            "to": [to],
+            "from": settings.resend_from_email,
+            "to": [recipient],
             "subject": subject,
             "html": html,
         }
