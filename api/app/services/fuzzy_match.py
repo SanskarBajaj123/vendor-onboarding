@@ -2,7 +2,7 @@ from rapidfuzz import fuzz
 
 # Below this score, two strings are considered a genuine mismatch rather than
 # a formatting difference (e.g. "Acme Inc." vs "Acme Incorporated" scores ~90+).
-NAME_MATCH_THRESHOLD = 82
+NAME_MATCH_THRESHOLD = 90
 ADDRESS_MATCH_THRESHOLD = 70
 
 

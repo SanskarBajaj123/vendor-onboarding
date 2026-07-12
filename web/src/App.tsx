@@ -9,7 +9,9 @@ import { EmployeeVendorDetailPage } from "./pages/EmployeeVendorDetailPage";
 
 function Root() {
   const { session, role, loading } = useAuth();
-  if (loading) return <CenteredMessage>Loading…</CenteredMessage>;
+  // Wait until both session AND role are resolved — role loads async after
+  // session, so without this check an employee briefly redirects to /vendor.
+  if (loading || (session !== null && role === null)) return <CenteredMessage>Loading…</CenteredMessage>;
   if (!session) return <AuthPage />;
   // Keep showing AuthPage during the signup onboarding step so the vendor
   // form renders on the same page immediately after account creation.
