@@ -6,6 +6,8 @@ pydantic
 pydantic-settings
 python-multipart
 google-genai
+openai
+pypdf
 resend
 httpx
 rapidfuzz
