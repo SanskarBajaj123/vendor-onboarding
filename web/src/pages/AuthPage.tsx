@@ -188,18 +188,24 @@ const DIAL_COUNTRIES: DialCountry[] = [
 
 function PhoneInput({
   onChange,
+  onValidChange,
 }: {
   onChange: (full: string) => void;
+  onValidChange?: (valid: boolean) => void;
 }) {
   const [selectedCountry, setSelectedCountry] = useState<DialCountry>(
     DIAL_COUNTRIES.find((c) => c.code === "IN")!
   );
   const [localNumber, setLocalNumber] = useState("");
+  const [touched, setTouched] = useState(false);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  // keep value in sync when country or local number changes
+  const isValid = localNumber.length >= 7;
+  const showError = touched && !isValid;
+
   const updateFull = (country: DialCountry, num: string) => {
     onChange(`${country.dial}${num}`);
+    onValidChange?.(num.length >= 7);
   };
 
   const filtered = query.trim()
@@ -221,6 +227,10 @@ function PhoneInput({
     const raw = e.target.value.replace(/\D/g, "").slice(0, 15);
     setLocalNumber(raw);
     updateFull(selectedCountry, raw);
+  }
+
+  function handleBlur() {
+    setTouched(true);
   }
 
   return (
@@ -251,10 +261,12 @@ function PhoneInput({
           placeholder="10-digit number"
           value={localNumber}
           onChange={handleNumberChange}
+          onBlur={handleBlur}
           required
           style={{
             flex: 1, height: 40, padding: "0 12px",
-            background: "#fff", border: "1.5px solid #d8d4cb",
+            background: "#fff",
+            border: `1.5px solid ${showError ? "#dc2626" : "#d8d4cb"}`,
             borderRadius: "0 9px 9px 0",
             fontSize: 13, boxSizing: "border-box", color: "#1a1a18",
           }}
@@ -316,6 +328,11 @@ function PhoneInput({
       {open && (
         <div style={{ position: "fixed", inset: 0, zIndex: 998 }} onClick={() => { setOpen(false); setQuery(""); }} />
       )}
+      {showError && (
+        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#dc2626" }}>
+          Enter at least 7 digits
+        </p>
+      )}
     </div>
   );
 }
@@ -331,6 +348,7 @@ function CredentialsForm({ onCreated, onSwitch }: CredentialsFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mobile, setMobile] = useState("");
+  const [phoneValid, setPhoneValid] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -382,13 +400,14 @@ function CredentialsForm({ onCreated, onSwitch }: CredentialsFormProps) {
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <Field label="Email ID *" type="email" placeholder="name@company.com" required
           value={email} onChange={(e) => setEmail(e.target.value)} />
-        <PhoneInput onChange={setMobile} />
+        <PhoneInput onChange={setMobile} onValidChange={setPhoneValid} />
         <Field label="Password *" type="password" placeholder="At least 6 characters" required minLength={6}
           value={password} onChange={(e) => setPassword(e.target.value)} />
         {error && <p style={{ margin: 0, fontSize: 12, color: "#a32d2d" }}>{error}</p>}
-        <button type="submit" disabled={submitting} style={{
-          height: 44, borderRadius: 10, border: "none", cursor: submitting ? "not-allowed" : "pointer",
-          background: submitting ? "#ccc" : "#1a1a18", color: "#fff",
+        <button type="submit" disabled={submitting || !phoneValid} style={{
+          height: 44, borderRadius: 10, border: "none",
+          cursor: (submitting || !phoneValid) ? "not-allowed" : "pointer",
+          background: (submitting || !phoneValid) ? "#ccc" : "#1a1a18", color: "#fff",
           fontSize: 14, fontWeight: 600, marginTop: 4,
         }}>
           {submitting ? "Creating account…" : "Continue"}

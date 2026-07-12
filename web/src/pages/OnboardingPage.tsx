@@ -328,11 +328,12 @@ export function OnboardingPage() {
 
             <section>
               <SectionLabel>Tax identification</SectionLabel>
-              <SelectField label="Country of registration *" {...register("country")}>
+              <SelectField label="Country of registration *" {...register("country")} disabled={!!existing}>
                 <option value="IN">India</option>
                 <option value="US">United States</option>
                 <option value="UK">United Kingdom</option>
               </SelectField>
+              {existing && <p style={{ margin: "4px 0 0", fontSize: 11, color: "#888780" }}>Country cannot be changed after initial submission.</p>}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
                 <Field
                   label={`${country === "US" ? "EIN" : country === "UK" ? "VAT number" : "GSTIN"} *`}
@@ -360,8 +361,21 @@ export function OnboardingPage() {
               <SectionLabel>Contact details</SectionLabel>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <Field label="Primary contact name *" {...register("contact_name")} error={errors.contact_name?.message} />
-                <Field label="Contact email *" type="email" {...register("contact_email")} error={errors.contact_email?.message} />
-                <Field label="Phone (optional)" {...register("contact_phone")} />
+                <Field
+                  label="Contact email *"
+                  type="email"
+                  {...register("contact_email")}
+                  error={errors.contact_email?.message}
+                  disabled={!!existing}
+                  hint={existing ? "Email cannot be changed after initial submission" : undefined}
+                />
+                <Field
+                  label="Phone (optional)"
+                  {...register("contact_phone")}
+                  error={errors.contact_phone?.message}
+                  disabled={!!existing}
+                  hint={existing ? "Phone cannot be changed after initial submission" : undefined}
+                />
               </div>
             </section>
 
