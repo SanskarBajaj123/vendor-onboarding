@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     supabase_service_role_key: str
 
     gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash-preview-05-20"
+    xai_api_key: str = ""
 
     resend_api_key: str = ""
     resend_from_email: str = "onboarding@resend.dev"

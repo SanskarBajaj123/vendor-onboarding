@@ -35,9 +35,10 @@ def _call_gemini(file_bytes: bytes, mime_type: str, document_type: str) -> dict:
     """Runs in a thread pool so it gets a clean event-loop context.
     The genai sync client internally calls asyncio which conflicts with
     FastAPI's running event loop when invoked directly from an async handler."""
-    client = genai.Client(api_key=get_settings().gemini_api_key)
+    settings = get_settings()
+    client = genai.Client(api_key=settings.gemini_api_key)
     response = client.models.generate_content(
-        model="gemini-2.0-flash",
+        model=settings.gemini_model,
         contents=[
             types.Part.from_bytes(data=file_bytes, mime_type=mime_type),
             EXTRACTION_PROMPT.format(doc_type=document_type),
