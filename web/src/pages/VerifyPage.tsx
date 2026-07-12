@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
-import { Card } from "../components/ui/Card";
 
 interface ConfirmResponse {
   status: "confirmed" | "expired" | "already_confirmed";
