@@ -22,8 +22,14 @@ export const vendorFormSchema = z
     bank_account_number: z.string().min(1, "Required"),
     bank_routing_number: z.string().min(1, "Required"),
     contact_name: z.string().min(1, "Required"),
-    contact_email: z.string().email("Invalid email"),
-    contact_phone: z.string().optional(),
+    contact_email: z.string().min(1, "Required").email("Invalid email address"),
+    contact_phone: z
+      .string()
+      .optional()
+      .refine(
+        (v) => !v || /^\+?[0-9\s\-().]{7,20}$/.test(v),
+        "Invalid phone number"
+      ),
   })
   .superRefine((data, ctx) => {
     if (data.country === "US" && !/^\d{2}-\d{7}$/.test(data.tax_id)) {

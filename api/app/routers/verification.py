@@ -10,7 +10,7 @@ from app.supabase_client import get_service_client
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/verify", tags=["verification"])
+router = APIRouter(prefix="/vendors/verify", tags=["verification"])
 
 
 @router.post("/{token}")
