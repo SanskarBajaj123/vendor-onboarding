@@ -27,12 +27,39 @@ def run_layer_2(submission: VendorSubmission, vendor_id: str) -> tuple[list[Issu
                 )
             )
 
+    # Key fields we expect to find in each document type.
+    # If ALL of these are null after extraction, the doc is irrelevant/unreadable.
+    EXPECTED_FIELDS: dict[str, list[str]] = {
+        "registration_certificate":  ["legal_name", "address"],
+        "bank_confirmation_letter":  ["account_holder_name", "account_number", "bank_name"],
+        "ein_confirmation_letter":   ["tax_id"],
+        "vat_certificate":           ["tax_id"],
+        "gst_certificate":           ["tax_id"],
+        "pan_card_copy":             ["tax_id"],
+    }
+
     # 2. Extract structured data from each uploaded document via Gemini
     extracted_by_type: dict[str, dict] = {}
     for doc in submission.documents:
         file_bytes = storage.download_document(doc.storage_path)
         try:
-            extracted_by_type[doc.type] = extract_document(file_bytes, doc.filename, doc.type)
+            data = extract_document(file_bytes, doc.filename, doc.type)
+            extracted_by_type[doc.type] = data
+
+            # Check if the document looks irrelevant (all expected fields null/empty)
+            expected = EXPECTED_FIELDS.get(doc.type, [])
+            if expected and not any(data.get(f) for f in expected):
+                issues.append(
+                    Issue(
+                        type="irrelevant_document",
+                        severity="soft",
+                        message=(
+                            f"The uploaded {doc.type.replace('_', ' ')} does not appear to "
+                            f"contain the expected information. Please upload the correct document."
+                        ),
+                        field=doc.type,
+                    )
+                )
         except Exception as e:
             issues.append(
                 Issue(
