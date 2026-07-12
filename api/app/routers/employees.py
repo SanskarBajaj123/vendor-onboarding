@@ -132,3 +132,17 @@ async def list_dev_feedback(user: CurrentUser = Depends(require_employee)):
     client = get_service_client()
     rows = client.table("dev_feedback").select("*").order("created_at", desc=True).execute()
     return rows.data
+
+
+@router.get("/process-logs")
+async def list_process_logs(
+    vendor_id: str | None = None,
+    limit: int = 200,
+    user: CurrentUser = Depends(require_employee),
+):
+    client = get_service_client()
+    q = client.table("process_logs").select("*, vendors(legal_name)").order("created_at", desc=False).limit(limit)
+    if vendor_id:
+        q = q.eq("vendor_id", vendor_id)
+    rows = q.execute()
+    return rows.data or []

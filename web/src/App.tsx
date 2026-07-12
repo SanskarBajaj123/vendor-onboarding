@@ -6,6 +6,7 @@ import { OnboardingPage } from "./pages/OnboardingPage";
 import { VerifyPage } from "./pages/VerifyPage";
 import { EmployeeDashboardPage } from "./pages/EmployeeDashboardPage";
 import { EmployeeVendorDetailPage } from "./pages/EmployeeVendorDetailPage";
+import { ProcessLogsPage } from "./pages/ProcessLogsPage";
 
 function Root() {
   const { session, role, loading } = useAuth();
@@ -46,6 +47,14 @@ export default function App() {
         element={
           <ProtectedRoute requireRole="employee">
             <EmployeeVendorDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/logs"
+        element={
+          <ProtectedRoute requireRole="employee">
+            <ProcessLogsPage />
           </ProtectedRoute>
         }
       />

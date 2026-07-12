@@ -138,6 +138,29 @@ export function EmployeeDashboardPage() {
 
   return (
     <Shell eyebrow="Employee view" title="Vendor submissions" maxWidth="1060px">
+      {/* Pipeline logs link */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+        <Link
+          to="/logs"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "6px 14px",
+            borderRadius: 7,
+            background: "#0d0d0d",
+            color: "#68d391",
+            border: "1px solid #276749",
+            textDecoration: "none",
+            fontSize: 12,
+            fontFamily: "monospace",
+            fontWeight: 600,
+            letterSpacing: "0.05em",
+          }}
+        >
+          ● PIPELINE LOGS
+        </Link>
+      </div>
       {/* Stat tiles */}
       <div style={{ display: "flex", gap: 14, marginBottom: 18 }}>
         <GradientTile label="Total vendors" value={vendors?.length ?? 0}

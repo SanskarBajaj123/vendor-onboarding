@@ -1,6 +1,6 @@
 from app.models.decision import Issue
 from app.models.vendor import REQUIRED_DOCUMENTS, VendorSubmission
-from app.services import storage
+from app.services import process_log, storage
 from app.services.fuzzy_match import addresses_match, names_match, tax_ids_match
 from app.services.gemini_extraction import extract_document
 
@@ -38,12 +38,20 @@ def run_layer_2(submission: VendorSubmission, vendor_id: str) -> tuple[list[Issu
         "pan_card_copy":             ["tax_id"],
     }
 
+    process_log.write(
+        vendor_id=vendor_id,
+        step="submission",
+        level="info",
+        message=f"Layer 2 started for '{submission.legal_name}' ({submission.country}) — {len(submission.documents)} document(s) to process",
+        details={"legal_name": submission.legal_name, "country": submission.country, "document_types": [d.type for d in submission.documents]},
+    )
+
     # 2. Extract structured data from each uploaded document via Gemini
     extracted_by_type: dict[str, dict] = {}
     for doc in submission.documents:
         file_bytes = storage.download_document(doc.storage_path)
         try:
-            data = extract_document(file_bytes, doc.filename, doc.type)
+            data = extract_document(file_bytes, doc.filename, doc.type, vendor_id=vendor_id)
             extracted_by_type[doc.type] = data
 
             # Check if the document looks irrelevant (all expected fields null/empty)
@@ -60,6 +68,13 @@ def run_layer_2(submission: VendorSubmission, vendor_id: str) -> tuple[list[Issu
                         field=doc.type,
                     )
                 )
+                process_log.write(
+                    vendor_id=vendor_id,
+                    step="cross_check",
+                    level="warning",
+                    message=f"Irrelevant document detected: {doc.type.replace('_', ' ')} — none of the expected fields ({', '.join(expected)}) were found",
+                    details={"document_type": doc.type, "expected_fields": expected},
+                )
         except Exception as e:
             issues.append(
                 Issue(
@@ -69,6 +84,13 @@ def run_layer_2(submission: VendorSubmission, vendor_id: str) -> tuple[list[Issu
                     field=doc.type,
                 )
             )
+            process_log.write(
+                vendor_id=vendor_id,
+                step="gemini_error",
+                level="error",
+                message=f"Gemini extraction failed for {doc.type.replace('_', ' ')}: {e}",
+                details={"document_type": doc.type, "error": str(e)},
+            )
 
     registration = extracted_by_type.get("registration_certificate")
     bank_letter = extracted_by_type.get("bank_confirmation_letter")
@@ -77,7 +99,15 @@ def run_layer_2(submission: VendorSubmission, vendor_id: str) -> tuple[list[Issu
 
     # 3. Legal name: form vs. registration certificate
     if registration and registration.get("legal_name"):
-        if not names_match(submission.legal_name, registration["legal_name"]):
+        match = names_match(submission.legal_name, registration["legal_name"])
+        process_log.write(
+            vendor_id=vendor_id,
+            step="cross_check",
+            level="success" if match else "warning",
+            message=f"Legal name: form='{submission.legal_name}' vs doc='{registration['legal_name']}' → {'MATCH' if match else 'MISMATCH'}",
+            details={"field": "legal_name", "form_value": submission.legal_name, "doc_value": registration["legal_name"], "match": match},
+        )
+        if not match:
             issues.append(
                 Issue(
                     type="name_mismatch",
@@ -100,7 +130,15 @@ def run_layer_2(submission: VendorSubmission, vendor_id: str) -> tuple[list[Issu
                 submission.address.postal_code,
             ]
         )
-        if not addresses_match(form_address, registration["address"]):
+        match = addresses_match(form_address, registration["address"])
+        process_log.write(
+            vendor_id=vendor_id,
+            step="cross_check",
+            level="success" if match else "warning",
+            message=f"Address: form='{form_address}' vs doc='{registration['address']}' → {'MATCH' if match else 'MISMATCH'}",
+            details={"field": "address", "form_value": form_address, "doc_value": registration["address"], "match": match},
+        )
+        if not match:
             issues.append(
                 Issue(
                     type="address_mismatch",
@@ -115,7 +153,15 @@ def run_layer_2(submission: VendorSubmission, vendor_id: str) -> tuple[list[Issu
 
     # 5. Tax ID: form vs. country ID document — HARD stop, not a formatting issue
     if id_doc and id_doc.get("tax_id"):
-        if not tax_ids_match(submission.tax_id, id_doc["tax_id"]):
+        match = tax_ids_match(submission.tax_id, id_doc["tax_id"])
+        process_log.write(
+            vendor_id=vendor_id,
+            step="cross_check",
+            level="success" if match else "error",
+            message=f"Tax ID: form='{submission.tax_id}' vs doc='{id_doc['tax_id']}' → {'MATCH' if match else 'HARD MISMATCH (identity)'}",
+            details={"field": "tax_id", "form_value": submission.tax_id, "doc_value": id_doc["tax_id"], "match": match, "severity": "hard"},
+        )
+        if not match:
             issues.append(
                 Issue(
                     type="tax_id_mismatch",
@@ -130,7 +176,15 @@ def run_layer_2(submission: VendorSubmission, vendor_id: str) -> tuple[list[Issu
 
     # 5b. India: PAN cross-check against the PAN card copy (also identity, also hard)
     if submission.country == "IN" and pan_doc and pan_doc.get("tax_id") and submission.pan:
-        if not tax_ids_match(submission.pan, pan_doc["tax_id"]):
+        match = tax_ids_match(submission.pan, pan_doc["tax_id"])
+        process_log.write(
+            vendor_id=vendor_id,
+            step="cross_check",
+            level="success" if match else "error",
+            message=f"PAN: form='{submission.pan}' vs doc='{pan_doc['tax_id']}' → {'MATCH' if match else 'HARD MISMATCH (identity)'}",
+            details={"field": "pan", "form_value": submission.pan, "doc_value": pan_doc["tax_id"], "match": match, "severity": "hard"},
+        )
+        if not match:
             issues.append(
                 Issue(
                     type="tax_id_mismatch",
@@ -145,9 +199,15 @@ def run_layer_2(submission: VendorSubmission, vendor_id: str) -> tuple[list[Issu
 
     # 6. Bank account ownership: form account holder vs. bank confirmation letter
     if bank_letter and bank_letter.get("account_holder_name"):
-        if not names_match(
-            submission.bank_account_holder_name, bank_letter["account_holder_name"]
-        ):
+        match = names_match(submission.bank_account_holder_name, bank_letter["account_holder_name"])
+        process_log.write(
+            vendor_id=vendor_id,
+            step="cross_check",
+            level="success" if match else "warning",
+            message=f"Bank holder: form='{submission.bank_account_holder_name}' vs doc='{bank_letter['account_holder_name']}' → {'MATCH' if match else 'MISMATCH'}",
+            details={"field": "bank_account_holder_name", "form_value": submission.bank_account_holder_name, "doc_value": bank_letter["account_holder_name"], "match": match},
+        )
+        if not match:
             issues.append(
                 Issue(
                     type="bank_ownership_mismatch",
@@ -165,7 +225,15 @@ def run_layer_2(submission: VendorSubmission, vendor_id: str) -> tuple[list[Issu
     if bank_letter and bank_letter.get("account_number") and submission.bank_account_number:
         letter_acc = bank_letter["account_number"].strip().replace(" ", "").replace("-", "")
         form_acc = submission.bank_account_number.strip().replace(" ", "").replace("-", "")
-        if letter_acc != form_acc:
+        match = letter_acc == form_acc
+        process_log.write(
+            vendor_id=vendor_id,
+            step="cross_check",
+            level="success" if match else "warning",
+            message=f"Bank account number: form='{submission.bank_account_number}' vs doc='{bank_letter['account_number']}' → {'MATCH' if match else 'MISMATCH'}",
+            details={"field": "bank_account_number", "form_value": submission.bank_account_number, "doc_value": bank_letter["account_number"], "match": match},
+        )
+        if not match:
             issues.append(
                 Issue(
                     type="bank_account_mismatch",
@@ -181,7 +249,15 @@ def run_layer_2(submission: VendorSubmission, vendor_id: str) -> tuple[list[Issu
 
     # 8. Bank name: form vs. bank confirmation letter (fuzzy — "HDFC" vs "HDFC Bank" is fine)
     if bank_letter and bank_letter.get("bank_name") and submission.bank_name:
-        if not names_match(submission.bank_name, bank_letter["bank_name"]):
+        match = names_match(submission.bank_name, bank_letter["bank_name"])
+        process_log.write(
+            vendor_id=vendor_id,
+            step="cross_check",
+            level="success" if match else "warning",
+            message=f"Bank name: form='{submission.bank_name}' vs doc='{bank_letter['bank_name']}' → {'MATCH' if match else 'MISMATCH'}",
+            details={"field": "bank_name", "form_value": submission.bank_name, "doc_value": bank_letter["bank_name"], "match": match},
+        )
+        if not match:
             issues.append(
                 Issue(
                     type="bank_name_mismatch",

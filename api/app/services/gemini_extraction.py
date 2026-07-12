@@ -49,7 +49,38 @@ def _call_gemini(file_bytes: bytes, mime_type: str, document_type: str) -> dict:
     return json.loads(response.text)
 
 
-def extract_document(file_bytes: bytes, filename: str, document_type: str) -> dict:
+def extract_document(
+    file_bytes: bytes,
+    filename: str,
+    document_type: str,
+    vendor_id: str | None = None,
+) -> dict:
+    from app.services import process_log
+
     mime_type = mimetypes.guess_type(filename)[0] or "application/pdf"
+    settings = get_settings()
+    doc_label = document_type.replace("_", " ")
+
+    if vendor_id:
+        process_log.write(
+            vendor_id=vendor_id,
+            step="gemini_request",
+            level="info",
+            message=f"Sending {doc_label} to Gemini (model: {settings.gemini_model})",
+            details={"document_type": document_type, "filename": filename, "model": settings.gemini_model},
+        )
+
     future = _executor.submit(_call_gemini, file_bytes, mime_type, document_type)
-    return future.result(timeout=120)
+    result = future.result(timeout=120)
+
+    if vendor_id:
+        non_null = {k: v for k, v in result.items() if v is not None}
+        process_log.write(
+            vendor_id=vendor_id,
+            step="gemini_response",
+            level="success" if non_null else "warning",
+            message=f"Gemini extracted from {doc_label}: {', '.join(f'{k}={repr(v)}' for k, v in non_null.items()) or 'no fields found'}",
+            details={"document_type": document_type, "extracted": result},
+        )
+
+    return result

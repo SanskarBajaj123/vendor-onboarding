@@ -2,7 +2,7 @@ import logging
 
 from app.config import get_settings
 from app.models.vendor import VendorSubmission
-from app.services import audit, cross_check, email_service
+from app.services import audit, cross_check, email_service, process_log
 from app.services.decision_engine import decide
 from app.supabase_client import get_service_client
 
@@ -34,6 +34,23 @@ def run_decision(vendor_id: str, submission: VendorSubmission, previous_status: 
 
     issues, extracted = cross_check.run_layer_2(submission, vendor_id)
     result = decide(issues)
+
+    hard_count = sum(1 for i in result.issues if i.severity == "hard")
+    soft_count = sum(1 for i in result.issues if i.severity == "soft")
+    decision_level = "success" if result.status == "approved" else ("warning" if result.status == "pending" else "error")
+    process_log.write(
+        vendor_id=vendor_id,
+        step="decision",
+        level=decision_level,
+        message=f"Decision engine: {hard_count} hard issue(s), {soft_count} soft issue(s) → {result.status.upper()}",
+        details={
+            "status": result.status,
+            "hard_issues": hard_count,
+            "soft_issues": soft_count,
+            "reasoning": result.reasoning,
+            "issues": [i.model_dump() for i in result.issues],
+        },
+    )
 
     update = {
         "status": result.status,
@@ -68,7 +85,21 @@ def run_decision(vendor_id: str, submission: VendorSubmission, previous_status: 
             reasoning=result.reasoning,
             reapply_url=reapply_url,
         )
+        process_log.write(
+            vendor_id=vendor_id,
+            step="email",
+            level="success",
+            message=f"Decision email sent to {submission.contact_email} (status: {result.status})",
+            details={"to": submission.contact_email, "status": result.status},
+        )
     except Exception as e:
         logger.warning("Email notification failed (decision already committed): %s", e)
+        process_log.write(
+            vendor_id=vendor_id,
+            step="email",
+            level="error",
+            message=f"Failed to send decision email to {submission.contact_email}: {e}",
+            details={"to": submission.contact_email, "error": str(e)},
+        )
 
     return {"status": result.status, "reasoning": result.reasoning, "issues": [i.model_dump() for i in result.issues]}
