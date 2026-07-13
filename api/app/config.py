@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     supabase_url: str
     supabase_service_role_key: str
 
+    mistral_api_key: str = ""
+
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.5-flash"
     xai_api_key: str = ""

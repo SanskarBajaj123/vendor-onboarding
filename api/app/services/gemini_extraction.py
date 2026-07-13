@@ -1,52 +1,81 @@
+"""Document extraction via Mistral OCR + Mistral Small structured output."""
+import base64
 import json
 import mimetypes
-from concurrent.futures import ThreadPoolExecutor
-
-from google import genai
-from google.genai import types
 
 from app.config import get_settings
 
-_executor = ThreadPoolExecutor(max_workers=4)
+EXTRACTION_PROMPT = """You are extracting structured data from a vendor onboarding document.
+The document type is: {doc_type}.
 
-EXTRACTION_SCHEMA = types.Schema(
-    type=types.Type.OBJECT,
-    properties={
-        "legal_name": types.Schema(type=types.Type.STRING, nullable=True),
-        "address": types.Schema(type=types.Type.STRING, nullable=True),
-        "tax_id": types.Schema(type=types.Type.STRING, nullable=True),
-        "account_holder_name": types.Schema(type=types.Type.STRING, nullable=True),
-        "account_number": types.Schema(type=types.Type.STRING, nullable=True),
-        "bank_name": types.Schema(type=types.Type.STRING, nullable=True),
-    },
-)
+From the text below, extract only what is actually present. Return a JSON object with these fields
+(use null for any field not found in this document):
+- legal_name: the registered/legal company name
+- address: the full registered address as a single string
+- tax_id: any tax ID, EIN, VAT number, GSTIN, PAN, or registration number printed
+- account_holder_name: bank account holder name
+- account_number: bank account number or IBAN
+- bank_name: name of the bank
 
-EXTRACTION_PROMPT = """You are extracting structured data from a vendor onboarding
-document for cross-checking against a submitted form. This document is a: {doc_type}.
-
-Extract only what is actually printed on this document. Leave a field null if it
-does not appear on this document (e.g. a bank letter won't have a tax ID).
-Return: legal/registered company name, full registered address, any tax ID /
-registration number / GSTIN / EIN / VAT number printed, bank account holder name,
-bank account number, and bank name."""
+Document text:
+{text}"""
 
 
-def _call_gemini(file_bytes: bytes, mime_type: str, document_type: str) -> dict:
-    """Runs in a thread pool so it gets a clean event-loop context."""
+def _ocr(file_bytes: bytes, mime_type: str) -> str:
+    """Call Mistral OCR and return extracted text."""
+    from mistralai import Mistral
+
     settings = get_settings()
-    client = genai.Client(api_key=settings.gemini_api_key)
-    response = client.models.generate_content(
-        model=settings.gemini_model,
-        contents=[
-            types.Part.from_bytes(data=file_bytes, mime_type=mime_type),
-            EXTRACTION_PROMPT.format(doc_type=document_type),
-        ],
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=EXTRACTION_SCHEMA,
-        ),
+    client = Mistral(api_key=settings.mistral_api_key)
+
+    b64 = base64.b64encode(file_bytes).decode()
+    data_url = f"data:{mime_type};base64,{b64}"
+
+    if mime_type == "application/pdf":
+        document = {"type": "document_url", "document_url": data_url}
+    else:
+        document = {"type": "image_url", "image_url": data_url}
+
+    response = client.ocr.process(
+        model="mistral-ocr-latest",
+        document=document,
     )
-    return json.loads(response.text)
+
+    # Collect text from all pages
+    pages = getattr(response, "pages", None) or []
+    if pages:
+        return "\n\n".join(p.markdown for p in pages if getattr(p, "markdown", None))
+    # Fallback for single-text response shapes
+    return str(response)
+
+
+def _extract_fields(text: str, document_type: str) -> dict:
+    """Send OCR text to Mistral Small and get structured JSON."""
+    from mistralai import Mistral
+
+    settings = get_settings()
+    client = Mistral(api_key=settings.mistral_api_key)
+
+    response = client.chat.complete(
+        model="mistral-small-latest",
+        messages=[
+            {
+                "role": "user",
+                "content": EXTRACTION_PROMPT.format(
+                    doc_type=document_type.replace("_", " "),
+                    text=text[:8000],  # stay within context limits
+                ),
+            }
+        ],
+        response_format={"type": "json_object"},
+        temperature=0,
+    )
+
+    raw = response.choices[0].message.content or "{}"
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
 
 
 def extract_document(
@@ -58,7 +87,6 @@ def extract_document(
     from app.services import process_log
 
     mime_type = mimetypes.guess_type(filename)[0] or "application/pdf"
-    settings = get_settings()
     doc_label = document_type.replace("_", " ")
 
     if vendor_id:
@@ -66,12 +94,15 @@ def extract_document(
             vendor_id=vendor_id,
             step="gemini_request",
             level="info",
-            message=f"Sending {doc_label} to Gemini (model: {settings.gemini_model})",
-            details={"document_type": document_type, "filename": filename, "model": settings.gemini_model},
+            message=f"Sending {doc_label} to Mistral OCR",
+            details={"document_type": document_type, "filename": filename, "model": "mistral-ocr-latest"},
         )
 
-    future = _executor.submit(_call_gemini, file_bytes, mime_type, document_type)
-    result = future.result(timeout=120)
+    # Step 1: OCR
+    text = _ocr(file_bytes, mime_type)
+
+    # Step 2: Structured extraction
+    result = _extract_fields(text, document_type)
 
     if vendor_id:
         non_null = {k: v for k, v in result.items() if v is not None}
@@ -79,8 +110,8 @@ def extract_document(
             vendor_id=vendor_id,
             step="gemini_response",
             level="success" if non_null else "warning",
-            message=f"Gemini extracted from {doc_label}: {', '.join(f'{k}={repr(v)}' for k, v in non_null.items()) or 'no fields found'}",
-            details={"document_type": document_type, "extracted": result},
+            message=f"Mistral extracted from {doc_label}: {', '.join(f'{k}={repr(v)}' for k, v in non_null.items()) or 'no fields found'}",
+            details={"document_type": document_type, "ocr_text_length": len(text), "extracted": result},
         )
 
     return result

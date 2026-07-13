@@ -5,9 +5,8 @@ python-dotenv
 pydantic
 pydantic-settings
 python-multipart
+mistralai
 google-genai
-openai
-pypdf
 resend
 httpx
 rapidfuzz
