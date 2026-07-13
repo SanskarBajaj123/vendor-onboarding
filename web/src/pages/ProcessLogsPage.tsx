@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
+const API_URL = (import.meta.env.VITE_API_URL as string) || "";
+
 interface LogEntry {
   id: string;
   vendor_id: string | null;
@@ -129,19 +131,33 @@ export function ProcessLogsPage() {
 
   async function fetchLogs() {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      let { data: { session } } = await supabase.auth.getSession();
       if (!session) { setError("Not authenticated"); return; }
+
       const params = new URLSearchParams({ limit: "300" });
       if (filterVendor) params.set("vendor_id", filterVendor);
-      const res = await fetch(`/employees/process-logs?${params}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (!res.ok) throw new Error(await res.text());
+      const url = `${API_URL}/employees/process-logs?${params}`;
+
+      let res = await fetch(url, { headers: { Authorization: `Bearer ${session.access_token}` } });
+
+      if (res.status === 401) {
+        // Token expired — refresh once and retry
+        const { data: refreshed } = await supabase.auth.refreshSession();
+        if (!refreshed.session) { setError("Session expired. Please sign in again."); return; }
+        session = refreshed.session;
+        res = await fetch(url, { headers: { Authorization: `Bearer ${session.access_token}` } });
+      }
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.detail ?? `Server error ${res.status}`);
+      }
+
       const data: LogEntry[] = await res.json();
       setLogs(data);
       setError(null);
     } catch (e: unknown) {
-      setError(String(e));
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
