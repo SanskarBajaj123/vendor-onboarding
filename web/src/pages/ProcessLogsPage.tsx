@@ -15,9 +15,9 @@ interface LogEntry {
 
 const STEP_LABELS: Record<string, string> = {
   submission: "SUBMIT",
-  gemini_request: "MISTRAL →",
-  gemini_response: "MISTRAL ←",
-  gemini_error: "MISTRAL ✕",
+  mistral_request: "MISTRAL →",
+  mistral_response: "MISTRAL ←",
+  mistral_error: "MISTRAL ✕",
   cross_check: "CHECK",
   decision: "DECISION",
   email: "EMAIL",
@@ -32,9 +32,9 @@ const LEVEL_COLORS: Record<string, { bg: string; text: string; badge: string }> 
 
 const STEP_COLORS: Record<string, string> = {
   submission:      "#63b3ed",
-  gemini_request:  "#b794f4",
-  gemini_response: "#9f7aea",
-  gemini_error:    "#fc8181",
+  mistral_request:  "#b794f4",
+  mistral_response: "#9f7aea",
+  mistral_error:    "#fc8181",
   cross_check:     "#68d391",
   decision:        "#f6ad55",
   email:           "#76e4f7",

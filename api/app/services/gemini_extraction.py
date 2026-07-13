@@ -61,7 +61,7 @@ def extract_all_documents(
     if vendor_id:
         process_log.write(
             vendor_id=vendor_id,
-            step="gemini_request",
+            step="mistral_request",
             level="info",
             message=f"OCR-ing {len(documents)} doc(s) with mistral-ocr-latest ({', '.join(doc_labels)})",
             details={"document_types": [d.doc_type for d in documents], "model": "mistral-ocr-latest + mistral-small-latest"},
@@ -113,7 +113,7 @@ def extract_all_documents(
         }
         process_log.write(
             vendor_id=vendor_id,
-            step="gemini_response",
+            step="mistral_response",
             level="success" if any(summary.values()) else "warning",
             message="Extracted: " +
                     " | ".join(f"{dt}: {list(fields.keys())}" for dt, fields in summary.items() if fields),

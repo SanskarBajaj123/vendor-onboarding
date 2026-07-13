@@ -72,7 +72,7 @@ def run_layer_2(submission: VendorSubmission, vendor_id: str) -> tuple[list[Issu
         except Exception as e:
             process_log.write(
                 vendor_id=vendor_id,
-                step="gemini_error",
+                step="mistral_error",
                 level="error",
                 message=f"Mistral extraction failed for all documents: {e}",
                 details={"error": str(e)},
