@@ -12,7 +12,7 @@ import { REQUIRED_DOCUMENTS, uploadDocument, type DocumentRef } from "../lib/doc
 
 const STEPS = [
   { num: 1, color: "#2563eb", label: "Submit details", sub: "Company, tax ID, bank info" },
-  { num: 2, color: "#7c3aed", label: "Document check", sub: "Gemini extracts and cross-checks" },
+  { num: 2, color: "#7c3aed", label: "Document check", sub: "Mistral extracts and cross-checks" },
   { num: 3, color: "#059669", label: "Automated decision", sub: "Approved, pending, or rejected" },
   { num: 4, color: "#d97706", label: "Notification sent", sub: "Email with status and next steps" },
 ];
@@ -422,7 +422,7 @@ function CredentialsForm({ onCreated, onSwitch }: CredentialsFormProps) {
 const RUN_STAGES: RunStage[] = [
   { key: "account", label: "Verifying your account", sub: "Session and profile confirmed" },
   { key: "documents", label: "Checking submitted documents", sub: "All required docs present and readable" },
-  { key: "extract", label: "Cross-checking details against documents", sub: "Gemini extracted and compared all fields" },
+  { key: "extract", label: "Cross-checking details against documents", sub: "Mistral extracted and compared all fields" },
   { key: "decide", label: "Applying decision rules", sub: "Running decision engine" },
   { key: "notify", label: "Notification sent", sub: "Email dispatched to contact address" },
 ];

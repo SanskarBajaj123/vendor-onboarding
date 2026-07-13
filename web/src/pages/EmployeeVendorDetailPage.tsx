@@ -184,11 +184,11 @@ export function EmployeeVendorDetailPage() {
               </p>
               {entry.reason && <p className="text-[13px] text-text-secondary">{entry.reason}</p>}
 
-              {/* Gemini extraction log — only on automated_decision entries */}
+              {/* Mistral extraction log — only on automated_decision entries */}
               {entry.action === "automated_decision" && entry.metadata?.extracted && (
                 <details style={{ marginTop: 10 }}>
                   <summary style={{ fontSize: 12, color: "#6366f1", cursor: "pointer", fontWeight: 500, userSelect: "none" }}>
-                    Gemini extraction log ({Object.keys(entry.metadata.extracted).length} documents)
+                    Mistral extraction log ({Object.keys(entry.metadata.extracted).length} documents)
                   </summary>
                   <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>
                     {Object.entries(entry.metadata.extracted).map(([docType, fields]) => (

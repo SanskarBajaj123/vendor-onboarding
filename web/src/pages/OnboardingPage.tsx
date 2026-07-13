@@ -40,7 +40,7 @@ interface SubmitResult {
 const RUN_STAGES: RunStage[] = [
   { key: "account", label: "Verifying your account & existing record", sub: "Session and profile confirmed" },
   { key: "documents", label: "Checking submitted documents are present", sub: "All required docs present and readable" },
-  { key: "extract", label: "Cross-checking details against your documents", sub: "Gemini extracted and compared all fields" },
+  { key: "extract", label: "Cross-checking details against your documents", sub: "Mistral extracted and compared all fields" },
   { key: "decide", label: "Applying decision rules", sub: "Running decision engine" },
   { key: "notify", label: "Sending notification", sub: "Email dispatched to contact address" },
 ];

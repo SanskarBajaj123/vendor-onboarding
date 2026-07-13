@@ -15,9 +15,9 @@ interface LogEntry {
 
 const STEP_LABELS: Record<string, string> = {
   submission: "SUBMIT",
-  gemini_request: "GEMINI →",
-  gemini_response: "GEMINI ←",
-  gemini_error: "GEMINI ✕",
+  gemini_request: "MISTRAL →",
+  gemini_response: "MISTRAL ←",
+  gemini_error: "MISTRAL ✕",
   cross_check: "CHECK",
   decision: "DECISION",
   email: "EMAIL",
