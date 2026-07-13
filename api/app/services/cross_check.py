@@ -2,7 +2,7 @@ from app.models.decision import Issue
 from app.models.vendor import REQUIRED_DOCUMENTS, VendorSubmission
 from app.services import process_log, storage
 from app.services.fuzzy_match import addresses_match, names_match, tax_ids_match
-from app.services.gemini_extraction import extract_document
+from app.services.gemini_extraction import DocumentInput, extract_all_documents
 
 ID_DOCUMENT_BY_COUNTRY = {
     "US": "ein_confirmation_letter",
@@ -46,50 +46,64 @@ def run_layer_2(submission: VendorSubmission, vendor_id: str) -> tuple[list[Issu
         details={"legal_name": submission.legal_name, "country": submission.country, "document_types": [d.type for d in submission.documents]},
     )
 
-    # 2. Extract structured data from each uploaded document via Gemini
-    extracted_by_type: dict[str, dict] = {}
+    # 2. Download all documents then extract in a single Mistral API call
+    doc_inputs: list[DocumentInput] = []
+    download_errors: dict[str, str] = {}
     for doc in submission.documents:
-        file_bytes = storage.download_document(doc.storage_path)
         try:
-            data = extract_document(file_bytes, doc.filename, doc.type, vendor_id=vendor_id)
-            extracted_by_type[doc.type] = data
-
-            # Check if the document looks irrelevant (all expected fields null/empty)
-            expected = EXPECTED_FIELDS.get(doc.type, [])
-            if expected and not any(data.get(f) for f in expected):
-                issues.append(
-                    Issue(
-                        type="irrelevant_document",
-                        severity="soft",
-                        message=(
-                            f"The uploaded {doc.type.replace('_', ' ')} does not appear to "
-                            f"contain the expected information. Please upload the correct document."
-                        ),
-                        field=doc.type,
-                    )
-                )
-                process_log.write(
-                    vendor_id=vendor_id,
-                    step="cross_check",
-                    level="warning",
-                    message=f"Irrelevant document detected: {doc.type.replace('_', ' ')} — none of the expected fields ({', '.join(expected)}) were found",
-                    details={"document_type": doc.type, "expected_fields": expected},
-                )
+            file_bytes = storage.download_document(doc.storage_path)
+            doc_inputs.append(DocumentInput(file_bytes=file_bytes, filename=doc.filename, doc_type=doc.type))
         except Exception as e:
-            issues.append(
-                Issue(
-                    type="extraction_failed",
-                    severity="soft",
-                    message=f"Could not read the {doc.type.replace('_', ' ')} document: {e}",
-                    field=doc.type,
-                )
-            )
+            download_errors[doc.type] = str(e)
+
+    # Flag any download failures as extraction_failed issues
+    for doc_type, err in download_errors.items():
+        issues.append(Issue(
+            type="extraction_failed",
+            severity="soft",
+            message=f"Could not download the {doc_type.replace('_', ' ')} document: {err}",
+            field=doc_type,
+        ))
+
+    extracted_by_type: dict[str, dict] = {}
+    if doc_inputs:
+        try:
+            extracted_by_type = extract_all_documents(doc_inputs, vendor_id=vendor_id)
+        except Exception as e:
             process_log.write(
                 vendor_id=vendor_id,
                 step="gemini_error",
                 level="error",
-                message=f"Gemini extraction failed for {doc.type.replace('_', ' ')}: {e}",
-                details={"document_type": doc.type, "error": str(e)},
+                message=f"Mistral extraction failed for all documents: {e}",
+                details={"error": str(e)},
+            )
+            for doc_input in doc_inputs:
+                issues.append(Issue(
+                    type="extraction_failed",
+                    severity="soft",
+                    message=f"Could not read the {doc_input.doc_type.replace('_', ' ')} document: {e}",
+                    field=doc_input.doc_type,
+                ))
+
+    # Check each extracted document for irrelevant content
+    for doc_type, data in extracted_by_type.items():
+        expected = EXPECTED_FIELDS.get(doc_type, [])
+        if expected and not any(data.get(f) for f in expected):
+            issues.append(Issue(
+                type="irrelevant_document",
+                severity="soft",
+                message=(
+                    f"The uploaded {doc_type.replace('_', ' ')} does not appear to "
+                    f"contain the expected information. Please upload the correct document."
+                ),
+                field=doc_type,
+            ))
+            process_log.write(
+                vendor_id=vendor_id,
+                step="cross_check",
+                level="warning",
+                message=f"Irrelevant document detected: {doc_type.replace('_', ' ')} — none of the expected fields ({', '.join(expected)}) were found",
+                details={"document_type": doc_type, "expected_fields": expected},
             )
 
     registration = extracted_by_type.get("registration_certificate")
