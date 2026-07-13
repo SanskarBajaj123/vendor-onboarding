@@ -5,7 +5,7 @@ python-dotenv
 pydantic
 pydantic-settings
 python-multipart
-mistralai
+mistralai>=1.0.0
 google-genai
 resend
 httpx
