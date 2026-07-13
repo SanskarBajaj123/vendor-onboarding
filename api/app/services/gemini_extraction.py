@@ -1,4 +1,8 @@
-"""Document extraction via Mistral Document AI — all documents in one API call."""
+"""Document extraction via Mistral Document AI.
+
+Step 1: OCR each document with mistral-ocr-latest (gets clean markdown text).
+Step 2: One structured extraction call with mistral-small-latest using all OCR outputs.
+"""
 import base64
 import json
 import mimetypes
@@ -8,9 +12,11 @@ from app.config import get_settings
 
 EXTRACTION_PROMPT = """You are extracting structured data from vendor onboarding documents.
 
-Each document above is labelled with its type. For each document, extract only what is
-actually printed on it. Return a single JSON object keyed by document type, where each
-value has these fields (use null for any field not present in that document):
+Below are OCR-extracted texts from vendor onboarding documents, each labelled with its type.
+For each document, extract only what is actually printed on it.
+
+Return a single JSON object keyed by document type, where each value has these fields
+(use null for any field not found in that document):
 - legal_name: the registered/legal company name
 - address: the full registered address as a single string
 - tax_id: any tax ID, EIN, VAT number, GSTIN, PAN, or registration number printed
@@ -20,11 +26,13 @@ value has these fields (use null for any field not present in that document):
 
 Example format:
 {
-  "registration_certificate": {"legal_name": "Acme Ltd", "address": "...", "tax_id": null, ...},
-  "bank_confirmation_letter": {"legal_name": null, "account_holder_name": "John", ...}
+  "registration_certificate": {"legal_name": "Acme Ltd", "address": "...", "tax_id": null, "account_holder_name": null, "account_number": null, "bank_name": null},
+  "bank_confirmation_letter": {"legal_name": null, "address": null, "tax_id": null, "account_holder_name": "John Smith", "account_number": "12345678", "bank_name": "HDFC Bank"}
 }
 
-Only include keys for documents that were provided."""
+Only include keys for document types that were provided. Here are the documents:
+
+"""
 
 
 @dataclass
@@ -38,7 +46,7 @@ def extract_all_documents(
     documents: list[DocumentInput],
     vendor_id: str | None = None,
 ) -> dict[str, dict]:
-    """Send all documents to Mistral in one call, get extraction keyed by doc type."""
+    """OCR all documents with mistral-ocr-latest, then extract structured JSON in one call."""
     from mistralai import Mistral
     from app.services import process_log
 
@@ -46,7 +54,7 @@ def extract_all_documents(
         return {}
 
     settings = get_settings()
-    model = "pixtral-large-latest"
+    client = Mistral(api_key=settings.mistral_api_key)
     doc_labels = [d.doc_type.replace("_", " ") for d in documents]
 
     if vendor_id:
@@ -54,44 +62,46 @@ def extract_all_documents(
             vendor_id=vendor_id,
             step="gemini_request",
             level="info",
-            message=f"Sending {len(documents)} document(s) to Mistral Document AI in one call ({', '.join(doc_labels)})",
-            details={"document_types": [d.doc_type for d in documents], "model": model},
+            message=f"OCR-ing {len(documents)} document(s) with mistral-ocr-latest ({', '.join(doc_labels)})",
+            details={"document_types": [d.doc_type for d in documents], "model": "mistral-ocr-latest"},
         )
 
-    # Build content blocks: one document_url block per doc, then the prompt
-    content = []
+    # Step 1: OCR each document individually
+    ocr_texts: dict[str, str] = {}
     for doc in documents:
         mime_type = mimetypes.guess_type(doc.filename)[0] or "application/pdf"
         b64 = base64.b64encode(doc.file_bytes).decode()
-        content.append({
-            "type": "text",
-            "text": f"[Document type: {doc.doc_type}]",
-        })
-        content.append({
-            "type": "document_url",
-            "document_url": f"data:{mime_type};base64,{b64}",
-        })
+        try:
+            ocr_resp = client.ocr.process(
+                model="mistral-ocr-latest",
+                document={
+                    "type": "document_url",
+                    "document_url": f"data:{mime_type};base64,{b64}",
+                },
+            )
+            ocr_texts[doc.doc_type] = "\n".join(page.markdown for page in ocr_resp.pages)
+        except Exception as e:
+            ocr_texts[doc.doc_type] = f"[OCR failed: {e}]"
 
-    content.append({
-        "type": "text",
-        "text": EXTRACTION_PROMPT,
-    })
+    # Step 2: One structured extraction call with all OCR text combined
+    combined = "\n\n".join(
+        f"=== {doc_type} ===\n{text}" for doc_type, text in ocr_texts.items()
+    )
 
-    client = Mistral(api_key=settings.mistral_api_key)
-    response = client.chat.complete(
-        model=model,
-        messages=[{"role": "user", "content": content}],
+    extraction_resp = client.chat.complete(
+        model="mistral-small-latest",
+        messages=[{"role": "user", "content": EXTRACTION_PROMPT + combined}],
         response_format={"type": "json_object"},
         temperature=0,
     )
 
-    raw = response.choices[0].message.content or "{}"
+    raw = extraction_resp.choices[0].message.content or "{}"
     try:
         result: dict[str, dict] = json.loads(raw)
     except json.JSONDecodeError:
         result = {}
 
-    # Ensure every submitted doc type has an entry (default to empty dict if missing)
+    # Ensure every submitted doc type has an entry
     for doc in documents:
         if doc.doc_type not in result:
             result[doc.doc_type] = {}
@@ -105,7 +115,7 @@ def extract_all_documents(
             vendor_id=vendor_id,
             step="gemini_response",
             level="success" if any(summary.values()) else "warning",
-            message=f"Mistral extracted from {len(documents)} document(s): " +
+            message="Mistral extracted: " +
                     " | ".join(f"{dt}: {list(fields.keys())}" for dt, fields in summary.items() if fields),
             details={"extracted": result},
         )
@@ -113,7 +123,6 @@ def extract_all_documents(
     return result
 
 
-# Keep single-doc signature for backwards compatibility (used by process_log step labelling)
 def extract_document(
     file_bytes: bytes,
     filename: str,
