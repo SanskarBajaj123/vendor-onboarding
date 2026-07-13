@@ -1,7 +1,8 @@
-"""Document extraction via Mistral Document AI.
+"""Document extraction via Mistral free tier.
 
-Step 1: OCR each document with mistral-ocr-latest (gets clean markdown text).
+Step 1: OCR each document with mistral-ocr-latest → clean markdown text.
 Step 2: One structured extraction call with mistral-small-latest using all OCR outputs.
+Both models are on Mistral's free tier.
 """
 import base64
 import json
@@ -26,7 +27,7 @@ Return a single JSON object keyed by document type, where each value has these f
 
 Example format:
 {
-  "registration_certificate": {"legal_name": "Acme Ltd", "address": "...", "tax_id": null, "account_holder_name": null, "account_number": null, "bank_name": null},
+  "registration_certificate": {"legal_name": "Acme Ltd", "address": "123 Main St", "tax_id": null, "account_holder_name": null, "account_number": null, "bank_name": null},
   "bank_confirmation_letter": {"legal_name": null, "address": null, "tax_id": null, "account_holder_name": "John Smith", "account_number": "12345678", "bank_name": "HDFC Bank"}
 }
 
@@ -46,7 +47,7 @@ def extract_all_documents(
     documents: list[DocumentInput],
     vendor_id: str | None = None,
 ) -> dict[str, dict]:
-    """OCR all documents with mistral-ocr-latest, then extract structured JSON in one call."""
+    """OCR all docs with mistral-ocr-latest, then one structured extraction with mistral-small-latest."""
     from mistralai import Mistral
     from app.services import process_log
 
@@ -62,11 +63,11 @@ def extract_all_documents(
             vendor_id=vendor_id,
             step="gemini_request",
             level="info",
-            message=f"OCR-ing {len(documents)} document(s) with mistral-ocr-latest ({', '.join(doc_labels)})",
-            details={"document_types": [d.doc_type for d in documents], "model": "mistral-ocr-latest"},
+            message=f"OCR-ing {len(documents)} doc(s) with mistral-ocr-latest ({', '.join(doc_labels)})",
+            details={"document_types": [d.doc_type for d in documents], "model": "mistral-ocr-latest + mistral-small-latest"},
         )
 
-    # Step 1: OCR each document individually
+    # Step 1: OCR each document with mistral-ocr-latest
     ocr_texts: dict[str, str] = {}
     for doc in documents:
         mime_type = mimetypes.guess_type(doc.filename)[0] or "application/pdf"
@@ -101,7 +102,6 @@ def extract_all_documents(
     except json.JSONDecodeError:
         result = {}
 
-    # Ensure every submitted doc type has an entry
     for doc in documents:
         if doc.doc_type not in result:
             result[doc.doc_type] = {}
@@ -115,7 +115,7 @@ def extract_all_documents(
             vendor_id=vendor_id,
             step="gemini_response",
             level="success" if any(summary.values()) else "warning",
-            message="Mistral extracted: " +
+            message="Extracted: " +
                     " | ".join(f"{dt}: {list(fields.keys())}" for dt, fields in summary.items() if fields),
             details={"extracted": result},
         )
