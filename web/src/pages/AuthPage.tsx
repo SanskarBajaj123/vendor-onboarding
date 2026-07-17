@@ -76,7 +76,7 @@ function BrandPanel() {
       </div>
 
       <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, marginTop: 40 }}>
-        Zamp · PS-2 · Vendor Onboarding
+        Vendor Onboarding Platform
       </p>
     </div>
   );

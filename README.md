@@ -1,36 +1,66 @@
-# Vendor Onboarding Automation — Zamp AI Solutions Associate Case Study
+# AI-Powered Vendor Onboarding Platform
 
-A fully automated vendor onboarding system built for the Zamp PS-2 take-home case study. Vendors submit company details and documents; the system extracts, cross-checks, and decides — approved, pending, or rejected — with a full audit trail and real email notifications at every step.
+An end-to-end automated vendor onboarding system. Vendors submit company details and documents; the platform extracts, cross-checks, and decides — approved, pending, or rejected — with a full audit trail and real email notifications at every step.
 
-**Live demo:** _link added after deploy_
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Visit%20App-4f46e5?style=for-the-badge)](https://zamp-vendor-onboarding.vercel.app)
+[![Demo Video](https://img.shields.io/badge/Demo%20Video-Watch%20on%20Loom-00aabb?style=for-the-badge&logo=loom)](https://www.loom.com/share/f90d611d39aa4f21a560587a85e6d9e0)
+[![Stack](https://img.shields.io/badge/Stack-React%20%2B%20FastAPI%20%2B%20Supabase-informational?style=for-the-badge)]()
+
+---
+
+## Demo
+
+Watch the full walkthrough — happy path + all 4 edge cases — on Loom:
+
+> **[https://www.loom.com/share/f90d611d39aa4f21a560587a85e6d9e0](https://www.loom.com/share/f90d611d39aa4f21a560587a85e6d9e0)**
+
+Live app: **[https://zamp-vendor-onboarding.vercel.app](https://zamp-vendor-onboarding.vercel.app)**
 
 ---
 
 ## What it does
 
-1. **Vendor signs up** → fills in company details, tax ID, bank info, and uploads documents — all on the same page, immediately after account creation.
-2. **Layer 1 validation** runs client-side as they type: required fields, country-specific tax ID formats (US EIN, UK VAT, India GSTIN + PAN), bank format.
-3. **Layer 2 (AI-powered)** runs on submit: Gemini Flash extracts structured data from each uploaded PDF and cross-checks it against the form — legal name, address, tax ID, bank account holder.
-4. **Automated decision** with three outcomes:
-   - **Approved** — zero issues
-   - **Pending** — exactly one soft issue (e.g. name formatting difference); vendor told exactly what to fix
-   - **Rejected** — tax ID hard mismatch, or two or more soft issues at once
-5. **Vendor is emailed** the decision + reasoning + a resubmit link if not approved.
-6. **Approved vendor resubmits** → system diffs against stored record → sends a **2-minute expiring confirmation link** to the original on-file email (fraud control). Demo both branches: confirmed in time, and expired.
-7. **Employee dashboard** — see every submission, override status (reason required, vendor notified), or flag a logic issue to the internal dev feedback log (never vendor-facing).
+1. **Vendor signs up** and is taken directly to the onboarding form — company details, country-specific tax ID, bank info, and document uploads on a single page.
+2. **Layer 1 (client-side)** validates everything live as the vendor types: required fields, tax ID format per country (US EIN `XX-XXXXXXX`, UK VAT `GB123456789`, India GSTIN 15-char + PAN `AAAAA9999A`), bank account format.
+3. **Layer 2 (AI-powered)** runs on submit: Mistral OCR extracts structured data from each uploaded document and cross-checks it against the form — legal name, address, tax ID, and bank account holder — using fuzzy matching (so "Acme Inc." and "Acme Incorporated" are treated as a match, not a mismatch).
+4. **Automated decision engine** produces one of three outcomes:
+   - **Approved** — zero issues found
+   - **Pending** — exactly one soft issue (e.g. a name formatting difference); vendor is told exactly what to fix
+   - **Rejected** — tax ID hard mismatch (identity-level, not fixable by clarification), or two or more soft issues at once
+5. **Real email** sent to the vendor with the decision, full reasoning, and a resubmit link if not approved.
+6. **Approved vendor resubmits** → system diffs against stored record → sends a **2-minute expiring confirmation link** to the original on-file email (proves control of the trusted channel, not just the new submission). Demo both branches: confirmed in time (changes applied and re-verified), or expired (no changes made, original data stands).
+7. **Employee dashboard** — see all submissions with status and reasoning, override any status (reason required, vendor is notified), or flag a logic issue to the internal dev feedback log (never visible to vendors). Full pipeline log with per-step live view.
+
+---
+
+## Architecture
+
+```
+Vendor Browser          FastAPI (Python)           Supabase
+──────────────          ────────────────           ────────
+ Layer 1 (client) ──►  /vendors/submit        ──►  vendors table
+                         ↓                          audit_log
+                        Mistral OCR                 verification_tokens
+                         ↓                          dev_feedback
+                        Mistral extraction           process_logs
+                         ↓
+                        Cross-check
+                         ↓
+                        Decision engine
+                         ↓
+                        Resend email
+```
 
 ---
 
 ## Edge cases demonstrated
 
-| # | Scenario | Expected result |
-|---|----------|----------------|
-| EC1 | Happy path — India vendor, all fields match | **Approved** |
-| EC2 | Single name mismatch — bank letter says "Private Limited", form says "Pvt Ltd" | **Pending** with specific mismatch named |
-| EC3 | Tax ID hard mismatch — EIN on form ≠ EIN on IRS letter | **Rejected** (hard stop) |
-| EC4 | Approved vendor resubmits with changed bank details | Security verification email, 2-min expiry — demo both confirm and expire branches |
-
-Test documents and exact form values for each edge case are in [`test_docs/README.md`](test_docs/README.md) (generated locally, not committed).
+| # | Scenario | Outcome |
+|---|----------|---------|
+| EC0 | Happy path — India vendor, all documents and fields match | **Approved** |
+| EC2 | Single name mismatch — bank letter says "Private Limited", form says "Pvt Ltd" | **Pending** with exact mismatch named |
+| EC3 | Tax ID hard mismatch — EIN on form ≠ EIN on IRS letter | **Rejected** (hard stop, identity-level) |
+| EC4 | Approved vendor resubmits with changed bank details | Security verification email, 2-min expiry — both confirm and expire branches demoed |
 
 ---
 
@@ -39,13 +69,14 @@ Test documents and exact form values for each edge case are in [`test_docs/READM
 | Layer | Technology |
 |-------|-----------|
 | Frontend | React 19 + Vite + TypeScript + Tailwind CSS v4 |
-| Backend | FastAPI (Python) |
-| Auth / DB / Storage | Supabase (free tier) |
-| AI — document extraction | Google Gemini Flash (free tier) |
-| Email delivery | Resend (free tier, real sends) |
-| Hosting | Vercel |
+| Backend | FastAPI (Python 3.11) |
+| Auth / DB / Storage | Supabase (PostgreSQL + Row Level Security) |
+| AI — document OCR | Mistral `mistral-ocr-latest` (free tier) |
+| AI — structured extraction | Mistral `mistral-small-latest` (free tier) |
+| Email delivery | Resend (real sends, free tier) |
+| Hosting | Vercel (frontend + serverless API) |
 
-All infrastructure is **free tier** — $0/month to run.
+All infrastructure is **free tier — $0/month.**
 
 ---
 
@@ -53,44 +84,53 @@ All infrastructure is **free tier** — $0/month to run.
 
 ```
 /
-├── api/                    # FastAPI backend
+├── api/                          # FastAPI backend (Vercel serverless)
 │   ├── app/
-│   │   ├── routers/        # vendors, employees, verification
-│   │   ├── services/       # gemini_extraction, cross_check, decision_engine,
-│   │   │                   # decision_flow, email_service, diff, audit, storage,
-│   │   │                   # fuzzy_match, verification_tokens
-│   │   └── models/         # VendorSubmission, Issue, DecisionResult
+│   │   ├── routers/              # vendors.py, employees.py, verification.py
+│   │   ├── services/             # gemini_extraction.py (Mistral), cross_check.py,
+│   │   │                         # decision_engine.py, decision_flow.py,
+│   │   │                         # email_service.py, diff.py, audit.py,
+│   │   │                         # storage.py, fuzzy_match.py, verification_tokens.py
+│   │   └── models/               # VendorSubmission, Issue, DecisionResult
 │   ├── scripts/
-│   │   ├── seed_employee.py        # creates employee@zamp.demo account
-│   │   └── generate_test_docs.py   # generates test PDFs for all 4 edge cases
-│   ├── index.py            # Vercel serverless entrypoint
+│   │   ├── seed_employee.py      # create an employee account
+│   │   └── generate_test_docs.py # generate test PDFs for all 4 edge cases
+│   ├── index.py                  # Vercel serverless entrypoint
 │   └── requirements.txt
-├── web/                    # React frontend
+├── web/                          # React frontend
 │   └── src/
-│       ├── pages/          # AuthPage, OnboardingPage, EmployeeDashboardPage,
-│       │                   # EmployeeVendorDetailPage, VerifyPage
-│       ├── components/ui/  # Shell, Card, Button, Field, StatusBadge, LiveRunView
-│       ├── lib/            # api.ts, supabase.ts, vendorSchema.ts, documents.ts
-│       └── contexts/       # AuthContext
-└── vercel.json             # Full-stack deploy config
+│       ├── pages/                # AuthPage, OnboardingPage, EmployeeDashboardPage,
+│       │                         # EmployeeVendorDetailPage, ProcessLogsPage, VerifyPage
+│       ├── components/ui/        # Shell, Card, Button, Field, StatusBadge, LiveRunView
+│       ├── lib/                  # api.ts, supabase.ts, vendorSchema.ts, documents.ts
+│       └── contexts/             # AuthContext
+├── test_docs/                    # generated test PDFs (gitignored)
+│   └── README.md                 # exact form values for each edge case
+└── vercel.json                   # full-stack deploy config
 ```
 
 ---
 
 ## Running locally
 
+### Prerequisites
+
+- Python 3.11+
+- Node.js 18+
+- A [Supabase](https://supabase.com) project (free tier)
+- A [Mistral](https://console.mistral.ai) API key (free tier)
+- A [Resend](https://resend.com) API key (free tier)
+
 ### Backend
 
 ```bash
 cd api
 python -m venv venv
-venv/Scripts/activate        # Windows
-# source venv/bin/activate   # Mac/Linux
+venv\Scripts\activate          # Windows
+# source venv/bin/activate     # Mac/Linux
 pip install -r requirements.txt
 
-# copy .env.example → .env and fill in secrets
-cp .env.example .env
-
+cp .env.example .env           # fill in secrets (see below)
 uvicorn app.main:app --reload
 ```
 
@@ -99,24 +139,23 @@ uvicorn app.main:app --reload
 ```bash
 cd web
 npm install
-cp .env.example .env.local   # fill in Supabase URL + anon key + API URL
+cp .env.example .env.local     # fill in Supabase URL + anon key + API URL
 npm run dev
 ```
 
-### Seed employee account
+### Create an employee account
 
 ```bash
 cd api
-PYTHONPATH=. venv/Scripts/python.exe scripts/seed_employee.py
-# employee@zamp.demo / Password123!
+PYTHONPATH=. python scripts/seed_employee.py employee@example.com YourPassword123!
 ```
 
 ### Generate test documents
 
 ```bash
 cd api
-PYTHONPATH=. venv/Scripts/python.exe scripts/generate_test_docs.py
-# outputs to test_docs/ — see test_docs/README.md for form values
+PYTHONPATH=. python scripts/generate_test_docs.py
+# outputs to test_docs/ — see test_docs/README.md for exact form values per edge case
 ```
 
 ---
@@ -125,18 +164,19 @@ PYTHONPATH=. venv/Scripts/python.exe scripts/generate_test_docs.py
 
 ### Backend (`api/.env`)
 
-```
+```env
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
-GEMINI_API_KEY=
+MISTRAL_API_KEY=
 RESEND_API_KEY=
 RESEND_FROM_EMAIL=onboarding@resend.dev
+RESEND_TO_OVERRIDE=          # optional: redirect all emails to one address (useful for testing)
 FRONTEND_URL=http://localhost:5173
 ```
 
 ### Frontend (`web/.env.local`)
 
-```
+```env
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
 VITE_API_URL=http://localhost:8000
@@ -144,29 +184,40 @@ VITE_API_URL=http://localhost:8000
 
 ---
 
-## Vercel deployment
+## Database schema
 
-Set these environment variables in the Vercel project dashboard (Settings → Environment Variables):
+Five tables in Supabase with Row Level Security enabled:
+
+| Table | Purpose |
+|-------|---------|
+| `profiles` | Every auth user (vendor or employee) with `role` |
+| `vendors` | One row per vendor — all form fields, status, `latest_reasoning` |
+| `audit_log` | Every automated decision and employee override with full context |
+| `verification_tokens` | 2-minute expiring links for approved-vendor resubmissions |
+| `dev_feedback` | Internal employee flags on process/logic issues (never vendor-facing) |
+
+RLS policies: vendors see only their own row; employees see everything. Writes to `audit_log`, `verification_tokens`, and `dev_feedback` are service-role only (backend-side, bypasses RLS by design).
+
+---
+
+## Deploying to Vercel
+
+1. Push to GitHub, import the repo in Vercel.
+2. Set these environment variables in the Vercel project dashboard:
 
 ```
 SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
-GEMINI_API_KEY
+MISTRAL_API_KEY
 RESEND_API_KEY
 RESEND_FROM_EMAIL
-FRONTEND_URL    ← set to your https://your-app.vercel.app URL
+FRONTEND_URL     ← your https://your-app.vercel.app URL
 ```
 
-The frontend variables (`VITE_*`) are baked into `web/.env.production` and committed — no dashboard config needed for those.
+The frontend env vars (`VITE_*`) are in `web/.env.production` and baked in at build time.
 
 ---
 
-## Database schema
+## Author
 
-Five tables in Supabase with RLS enabled:
-
-- **profiles** — every auth user (vendor or employee), with `role`
-- **vendors** — one row per vendor, all form fields + status + `latest_reasoning`
-- **audit_log** — every automated decision and employee override
-- **verification_tokens** — 2-minute expiring links for approved-vendor resubmissions
-- **dev_feedback** — internal employee flags on process/logic issues (never vendor-facing)
+**Sanskar Bajaj** — [GitHub](https://github.com/SanskarBajaj123)
