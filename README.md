@@ -21,7 +21,7 @@ Live app: **[https://zamp-vendor-onboarding.vercel.app](https://zamp-vendor-onbo
 ## What it does
 
 1. **Vendor signs up** and is taken directly to the onboarding form — company details, country-specific tax ID, bank info, and document uploads on a single page.
-2. **Layer 1 (client-side)** validates everything live as the vendor types: required fields, tax ID format per country (US EIN `XX-XXXXXXX`, UK VAT `GB123456789`, India GSTIN 15-char + PAN `AAAAA9999A`), bank account format.
+2. **Layer 1 (client-side)** validates everything live as the vendor types: required fields, tax ID format per country (US EIN `XX-XXXXXXX`, UK VAT `GB123456789`, India GSTIN 15-char + PAN `AAAAA9999A`), bank account format. Nothing reaches the backend until all fields are valid.
 3. **Layer 2 (AI-powered)** runs on submit: Mistral OCR extracts structured data from each uploaded document and cross-checks it against the form — legal name, address, tax ID, and bank account holder — using fuzzy matching (so "Acme Inc." and "Acme Incorporated" are treated as a match, not a mismatch).
 4. **Automated decision engine** produces one of three outcomes:
    - **Approved** — zero issues found
@@ -33,23 +33,77 @@ Live app: **[https://zamp-vendor-onboarding.vercel.app](https://zamp-vendor-onbo
 
 ---
 
-## Architecture
+## Process flow
 
+```mermaid
+flowchart TD
+    A["Vendor fills form + documents<br/>(company details, bank info, tax ID, compliance docs)"]
+    A --> A1{"Layer 1: Front-end validation<br/>runs live on the vendor's form"}
+
+    A1 -- "Invalid: missing field / bad format" --> A2["Inline error shown immediately<br/>no submit possible until fixed"]
+    A2 -.-> A
+
+    A1 -- "Valid: form submitted" --> C{"Tax ID lookup"}
+
+    C -- "New tax ID" --> D1["Create new record"]
+    C -- "Existing Pending/Rejected record" --> D2["Update existing record<br/>treated as resubmission"]
+    C -- "Existing Approved record" --> C2{"Diff new submission<br/>vs. stored record"}
+
+    C2 -- "No differences" --> N1["Notify: no change<br/>status stays Approved"]
+    C2 -- "Any difference found" --> S1["Security verification<br/>link sent to ORIGINAL on-file email<br/>expires in 2 minutes"]
+
+    S1 -- "Confirmed within 2 min" --> D3["Update changed fields<br/>bank vs. non-bank noted in audit trail"]
+    S1 -- "Expired / not clicked" --> S2["Resubmission rejected<br/>no update applied"]
+    S2 --> S3["Email: resubmission rejected"]
+
+    D1 --> E["Layer 2: Document verification<br/>extract + cross-check name, address, tax ID, bank ownership"]
+    D2 --> E
+    D3 --> E
+
+    E --> F{"Automated status decision<br/>no manual approve gate"}
+
+    F -- "All checks consistent" --> G["Status: Approved"]
+    F -- "Minor inconsistency" --> H["Status: Pending"]
+    F -- "Hard mismatch / invalid" --> I["Status: Rejected"]
+
+    G --> J["Dashboard log<br/>status + reasoning + audit trail"]
+    H --> J
+    I --> J
+    N1 --> J
+    S3 --> J
+
+    J --> K["Notify vendor<br/>email: status + reasoning + reapply link if not Approved"]
+
+    subgraph RBAC["Employee Dashboard (RBAC)"]
+        direction TB
+        R1["View all submissions"]
+        R2["Override this vendor's status<br/>requires a reason"]
+        R3["Flag process/logic issue<br/>requires a reason"]
+        R4["Dev feedback log<br/>internal only, never vendor-facing"]
+        R1 --> R2
+        R1 --> R3
+        R3 --> R4
+    end
+
+    R2 -.-> J
+    R2 -.-> K
+
+    classDef approved fill:#f0fdf4,stroke:#16a34a,color:#14532d;
+    classDef pending fill:#fffbeb,stroke:#d97706,color:#78350f;
+    classDef rejected fill:#fef2f2,stroke:#dc2626,color:#7f1d1d;
+    classDef decision fill:#f5f3ff,stroke:#7c6ff0,color:#4338ca;
+    classDef process fill:#eff6ff,stroke:#2563eb,color:#1e3a8a;
+    classDef rbac fill:#f0fdfa,stroke:#0d9488,color:#0f766e;
+
+    class A1,C,C2,F decision;
+    class A,D1,D2,D3,E,J,K,N1,S1 process;
+    class G approved;
+    class H pending;
+    class I,A2,S2,S3 rejected;
+    class R1,R2,R3,R4 rbac;
 ```
-Vendor Browser          FastAPI (Python)           Supabase
-──────────────          ────────────────           ────────
- Layer 1 (client) ──►  /vendors/submit        ──►  vendors table
-                         ↓                          audit_log
-                        Mistral OCR                 verification_tokens
-                         ↓                          dev_feedback
-                        Mistral extraction           process_logs
-                         ↓
-                        Cross-check
-                         ↓
-                        Decision engine
-                         ↓
-                        Resend email
-```
+
+> Static export: [`vendor_onboarding_process.svg`](vendor_onboarding_process.svg) · source: [`vendor_onboarding_process.mermaid`](vendor_onboarding_process.mermaid)
 
 ---
 
@@ -61,6 +115,8 @@ Vendor Browser          FastAPI (Python)           Supabase
 | EC2 | Single name mismatch — bank letter says "Private Limited", form says "Pvt Ltd" | **Pending** with exact mismatch named |
 | EC3 | Tax ID hard mismatch — EIN on form ≠ EIN on IRS letter | **Rejected** (hard stop, identity-level) |
 | EC4 | Approved vendor resubmits with changed bank details | Security verification email, 2-min expiry — both confirm and expire branches demoed |
+
+Exact form values and document filenames for each edge case are in [`test_docs/README.md`](test_docs/README.md).
 
 ---
 
@@ -74,7 +130,7 @@ Vendor Browser          FastAPI (Python)           Supabase
 | AI — document OCR | Mistral `mistral-ocr-latest` (free tier) |
 | AI — structured extraction | Mistral `mistral-small-latest` (free tier) |
 | Email delivery | Resend (real sends, free tier) |
-| Hosting | Vercel (frontend + serverless API) |
+| Hosting | Vercel (frontend + serverless API functions) |
 
 All infrastructure is **free tier — $0/month.**
 
@@ -87,10 +143,9 @@ All infrastructure is **free tier — $0/month.**
 ├── api/                          # FastAPI backend (Vercel serverless)
 │   ├── app/
 │   │   ├── routers/              # vendors.py, employees.py, verification.py
-│   │   ├── services/             # gemini_extraction.py (Mistral), cross_check.py,
-│   │   │                         # decision_engine.py, decision_flow.py,
-│   │   │                         # email_service.py, diff.py, audit.py,
-│   │   │                         # storage.py, fuzzy_match.py, verification_tokens.py
+│   │   ├── services/             # mistral extraction, cross_check, decision_engine,
+│   │   │                         # decision_flow, email_service, diff, audit,
+│   │   │                         # storage, fuzzy_match, verification_tokens
 │   │   └── models/               # VendorSubmission, Issue, DecisionResult
 │   ├── scripts/
 │   │   ├── seed_employee.py      # create an employee account
@@ -106,8 +161,21 @@ All infrastructure is **free tier — $0/month.**
 │       └── contexts/             # AuthContext
 ├── test_docs/                    # generated test PDFs (gitignored)
 │   └── README.md                 # exact form values for each edge case
-└── vercel.json                   # full-stack deploy config
+├── vendor_onboarding_process.mermaid   # process flow source
+├── vendor_onboarding_process.svg       # process flow static export
+├── vendor_onboarding_ui_mockup.html    # standalone UI mockup (open in browser)
+└── vercel.json                         # full-stack deploy config
 ```
+
+---
+
+## Design artefacts
+
+| File | Description |
+|------|-------------|
+| [`vendor_onboarding_process.mermaid`](vendor_onboarding_process.mermaid) | Mermaid source for the full process flowchart above |
+| [`vendor_onboarding_process.svg`](vendor_onboarding_process.svg) | Static SVG export of the process flow |
+| [`vendor_onboarding_ui_mockup.html`](vendor_onboarding_ui_mockup.html) | Standalone HTML mockup — open directly in a browser to see the sign-in/sign-up card and onboarding form with live validation error states |
 
 ---
 
