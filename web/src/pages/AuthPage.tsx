@@ -94,6 +94,8 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
+    // Clear any stale signup flag so Root() doesn't trap the user on AuthPage
+    sessionStorage.removeItem("new_signup");
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;

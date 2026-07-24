@@ -92,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signOut() {
     log("signOut() called by user");
+    sessionStorage.removeItem("new_signup");
     await supabase.auth.signOut({ scope: "local" });
     log("signOut() complete — reloading page");
     window.location.replace("/");
