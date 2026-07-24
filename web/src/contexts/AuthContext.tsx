@@ -62,7 +62,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
+    // Force a full page reload to flush the Supabase client's in-memory
+    // session cache. Without this, the GoTrue client retains stale state
+    // that prevents signing in as a different account in the same tab.
+    window.location.replace("/");
   }
 
   return (
