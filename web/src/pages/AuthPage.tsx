@@ -202,12 +202,12 @@ function PhoneInput({
   const [touched, setTouched] = useState(false);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const isValid = localNumber.length >= 7;
+  const isValid = localNumber.length === 10;
   const showError = touched && !isValid;
 
   const updateFull = (country: DialCountry, num: string) => {
-    onChange(`${country.dial}${num}`);
-    onValidChange?.(num.length >= 7);
+    onChange(num);
+    onValidChange?.(num.length === 10);
   };
 
   const filtered = query.trim()
@@ -332,7 +332,7 @@ function PhoneInput({
       )}
       {showError && (
         <p style={{ margin: "4px 0 0", fontSize: 12, color: "#dc2626" }}>
-          Enter at least 7 digits
+          Enter exactly 10 digits
         </p>
       )}
     </div>
@@ -613,7 +613,12 @@ function VendorOnboardingForm({ accountEmail, accountMobile }: { accountEmail: s
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <Field label="Primary contact name *" {...register("contact_name")} error={errors.contact_name?.message} />
               <Field label="Contact email *" type="email" {...register("contact_email")} error={errors.contact_email?.message} />
-              <Field label="Phone (optional)" {...register("contact_phone")} />
+              <Field
+                label="Phone (10 digits) *"
+                {...register("contact_phone")}
+                error={errors.contact_phone?.message}
+                hint="Auto-filled from account creation"
+              />
             </div>
           </section>
 
