@@ -10,6 +10,14 @@ logger = logging.getLogger(__name__)
 
 
 def vendor_row_from_submission(submission: VendorSubmission) -> dict:
+    named: dict = {}
+    if submission.country == "US":
+        named["ein"] = submission.tax_id
+    elif submission.country == "UK":
+        named["vat_number"] = submission.tax_id
+    elif submission.country == "IN":
+        named["gstin"] = submission.tax_id
+
     return {
         "tax_id": submission.tax_id,
         "tax_id_country": submission.country,
@@ -23,6 +31,7 @@ def vendor_row_from_submission(submission: VendorSubmission) -> dict:
         "bank_routing_number": submission.bank_routing_number,
         "current_contact_email": submission.contact_email,
         "documents": [d.model_dump() for d in submission.documents],
+        **named,
     }
 
 
