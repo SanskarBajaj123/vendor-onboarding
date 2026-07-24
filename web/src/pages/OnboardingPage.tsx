@@ -371,7 +371,7 @@ export function OnboardingPage() {
                   hint={existing ? "Email cannot be changed after initial submission" : undefined}
                 />
                 <Field
-                  label="Phone (optional, 10 digits)"
+                  label="Phone (10 digits, no country code) *"
                   {...register("contact_phone")}
                   error={errors.contact_phone?.message}
                 />

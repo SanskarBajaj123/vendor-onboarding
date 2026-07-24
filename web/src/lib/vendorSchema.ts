@@ -25,11 +25,8 @@ export const vendorFormSchema = z
     contact_email: z.string().min(1, "Required").email("Invalid email address"),
     contact_phone: z
       .string()
-      .optional()
-      .refine(
-        (v) => !v || /^\d{10}$/.test(v),
-        "Must be exactly 10 digits"
-      ),
+      .min(1, "Required")
+      .regex(/^\d{10}$/, "Must be exactly 10 digits (no country code)"),
   })
   .superRefine((data, ctx) => {
     if (data.country === "US" && !/^\d{2}-\d{7}$/.test(data.tax_id)) {
