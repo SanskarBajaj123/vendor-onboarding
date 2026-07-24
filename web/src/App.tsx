@@ -10,13 +10,15 @@ import { ProcessLogsPage } from "./pages/ProcessLogsPage";
 
 function Root() {
   const { session, role, loading } = useAuth();
+  // During signup the user is mid-flow inside AuthPage (step 2: vendor form).
+  // Check this FIRST so AuthPage is never unmounted by a loading/role change —
+  // onAuthStateChange fires during signUp() and would otherwise briefly flip to
+  // <CenteredMessage>, destroying view="signup-step2" state and resetting to signin.
+  if (sessionStorage.getItem("new_signup") === "1") return <AuthPage />;
   // Wait until both session AND role are resolved — role loads async after
   // session, so without this check an employee briefly redirects to /vendor.
   if (loading || (session !== null && role === null)) return <CenteredMessage>Loading…</CenteredMessage>;
   if (!session) return <AuthPage />;
-  // Keep showing AuthPage during the signup onboarding step so the vendor
-  // form renders on the same page immediately after account creation.
-  if (sessionStorage.getItem("new_signup") === "1") return <AuthPage />;
   if (role === "employee") return <Navigate to="/employee" replace />;
   return <Navigate to="/vendor" replace />;
 }
