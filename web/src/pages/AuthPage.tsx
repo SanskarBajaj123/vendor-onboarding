@@ -226,7 +226,7 @@ function PhoneInput({
   }
 
   function handleNumberChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const raw = e.target.value.replace(/\D/g, "").slice(0, 15);
+    const raw = e.target.value.replace(/\D/g, "").slice(0, 10);
     setLocalNumber(raw);
     updateFull(selectedCountry, raw);
   }
