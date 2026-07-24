@@ -13,53 +13,71 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
+const log = (...args: unknown[]) => console.log("[Auth]", ...args);
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    log("useEffect: calling getSession()");
+    supabase.auth.getSession().then(({ data, error }) => {
+      log("getSession() result:", {
+        hasSession: !!data.session,
+        userId: data.session?.user?.id,
+        email: data.session?.user?.email,
+        error,
+      });
       setSession(data.session);
-      loadRole(data.session);
+      loadRole(data.session, "getSession");
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
+      log("onAuthStateChange:", event, {
+        hasSession: !!newSession,
+        userId: newSession?.user?.id,
+        email: newSession?.user?.email,
+      });
       setSession(newSession);
-      loadRole(newSession);
+      loadRole(newSession, `authChange:${event}`);
     });
 
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  async function loadRole(currentSession: Session | null) {
+  async function loadRole(currentSession: Session | null, source: string) {
+    log(`loadRole [${source}]:`, currentSession ? `user=${currentSession.user.email}` : "null session");
+
     if (!currentSession) {
+      log(`loadRole [${source}]: no session → setting role=null, loading=false`);
       setRole(null);
       setLoading(false);
       return;
     }
 
+    log(`loadRole [${source}]: querying profiles for id=${currentSession.user.id}`);
     let { data, error } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", currentSession.user.id)
       .single();
 
-    // New signups hit a race condition: the DB trigger that creates the
-    // profile row runs async, so the row may not exist yet on the first
-    // onAuthStateChange fire. Retry once after a short wait.
+    log(`loadRole [${source}]: profiles result:`, { data, errorCode: error?.code, errorMsg: error?.message });
+
     if ((error || !data) && sessionStorage.getItem("new_signup") === "1") {
+      log(`loadRole [${source}]: new_signup flag set and no profile — waiting 1s and retrying`);
       await new Promise((r) => setTimeout(r, 1000));
       ({ data, error } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", currentSession.user.id)
         .single());
+      log(`loadRole [${source}]: retry result:`, { data, errorCode: error?.code, errorMsg: error?.message });
     }
 
     if (error || !data) {
-      // Genuinely no profile — clear session locally only (no API call, no
-      // page reload) so we don't interrupt a signup flow in progress.
+      log(`loadRole [${source}]: still no profile after retry — signing out locally`);
       await supabase.auth.signOut({ scope: "local" });
       setSession(null);
       setRole(null);
@@ -67,14 +85,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    log(`loadRole [${source}]: setting role=${data.role}`);
     setRole(data.role as Role);
     setLoading(false);
   }
 
   async function signOut() {
+    log("signOut() called by user");
     await supabase.auth.signOut({ scope: "local" });
-    // Full page reload flushes the Supabase client's in-memory session
-    // cache, ensuring a clean slate when signing in as a different account.
+    log("signOut() complete — reloading page");
     window.location.replace("/");
   }
 
