@@ -436,12 +436,17 @@ interface SubmitResult {
   issues?: { message: string }[];
 }
 
+async function signOutAndReturn() {
+  sessionStorage.removeItem("new_signup");
+  await supabase.auth.signOut({ scope: "local" });
+  window.location.replace("/");
+}
+
 function VendorOnboardingForm({ accountEmail, accountMobile }: { accountEmail: string; accountMobile: string }) {
   const [docs, setDocs] = useState<Record<string, DocumentRef>>({});
   const [uploading, setUploading] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [pendingPayload, setPendingPayload] = useState<Record<string, unknown> | null>(null);
-  const [done, setDone] = useState(false);
 
   const {
     register, handleSubmit, watch,
@@ -492,17 +497,6 @@ function VendorOnboardingForm({ accountEmail, accountMobile }: { accountEmail: s
 
   const canSubmit = isValid && allDocsUploaded && !uploading;
 
-  if (done) {
-    return (
-      <div style={{ textAlign: "center", padding: "40px 0" }}>
-        <p style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>You're all set</p>
-        <p style={{ fontSize: 13, color: "#5f5e5a" }}>
-          Your submission has been reviewed. Sign in any time to check your status.
-        </p>
-      </div>
-    );
-  }
-
   if (pendingPayload) {
     return (
       <div>
@@ -530,10 +524,10 @@ function VendorOnboardingForm({ accountEmail, accountMobile }: { accountEmail: s
                     ))}
                   </ul>
                 )}
-                <button onClick={() => { sessionStorage.removeItem("new_signup"); setDone(true); }} style={{
+                <button onClick={signOutAndReturn} style={{
                   height: 40, borderRadius: 9, border: "none", cursor: "pointer",
                   background: "#1a1a18", color: "#fff", fontSize: 13, fontWeight: 600, padding: "0 20px",
-                }}>Done</button>
+                }}>Done — go to sign in</button>
               </div>
             )}
           />
@@ -544,7 +538,7 @@ function VendorOnboardingForm({ accountEmail, accountMobile }: { accountEmail: s
 
   return (
     <div>
-      {/* Progress bar */}
+      {/* Progress bar + sign-out */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, opacity: 0.5 }}>
           <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -557,6 +551,17 @@ function VendorOnboardingForm({ accountEmail, accountMobile }: { accountEmail: s
           <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#1a1a18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff" }}>2</div>
           <span style={{ fontSize: 12, fontWeight: 600 }}>Company details</span>
         </div>
+        <button
+          type="button"
+          onClick={signOutAndReturn}
+          style={{
+            marginLeft: 8, height: 32, padding: "0 14px", borderRadius: 7,
+            border: "1.5px solid #d8d4cb", background: "transparent",
+            fontSize: 12, color: "#5f5e5a", cursor: "pointer", fontWeight: 500,
+          }}
+        >
+          Sign out
+        </button>
       </div>
 
       <h2 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 700 }}>Tell us about your company</h2>
