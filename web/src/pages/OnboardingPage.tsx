@@ -24,6 +24,7 @@ interface VendorRecord {
   bank_account_holder_name: string;
   bank_account_number: string;
   bank_routing_number: string;
+  contact_name: string | null;
   current_contact_email: string | null;
   original_email: string;
   contact_phone: string | null;
@@ -218,7 +219,7 @@ export function OnboardingPage() {
           bank_account_holder_name: data.bank_account_holder_name,
           bank_account_number: data.bank_account_number,
           bank_routing_number: data.bank_routing_number,
-          contact_name: data.current_contact_email ? data.legal_name : "",
+          contact_name: data.contact_name ?? "",
           contact_email: data.current_contact_email ?? data.original_email,
           contact_phone: data.contact_phone ?? "",
         });
@@ -370,11 +371,9 @@ export function OnboardingPage() {
                   hint={existing ? "Email cannot be changed after initial submission" : undefined}
                 />
                 <Field
-                  label="Phone (optional)"
+                  label="Phone (optional, 10 digits)"
                   {...register("contact_phone")}
                   error={errors.contact_phone?.message}
-                  disabled={!!existing}
-                  hint={existing ? "Phone cannot be changed after initial submission" : undefined}
                 />
               </div>
             </section>

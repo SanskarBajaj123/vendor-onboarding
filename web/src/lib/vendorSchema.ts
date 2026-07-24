@@ -27,8 +27,8 @@ export const vendorFormSchema = z
       .string()
       .optional()
       .refine(
-        (v) => !v || /^\+?[0-9\s\-().]{7,20}$/.test(v),
-        "Invalid phone number"
+        (v) => !v || /^\d{10}$/.test(v),
+        "Must be exactly 10 digits"
       ),
   })
   .superRefine((data, ctx) => {

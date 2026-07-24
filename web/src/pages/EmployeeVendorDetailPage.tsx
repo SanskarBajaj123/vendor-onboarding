@@ -34,14 +34,36 @@ interface VendorDetail {
   vendor: {
     id: string;
     legal_name: string;
+    trading_name: string | null;
     status: string;
     tax_id: string;
     tax_id_country: string;
-    latest_reasoning: { reasoning: string; issues: { message: string }[] } | null;
+    pan: string | null;
+    ein: string | null;
+    vat_number: string | null;
+    gstin: string | null;
+    address: { street: string; city: string; region: string; postal_code: string } | null;
+    bank_name: string | null;
+    bank_account_holder_name: string | null;
+    bank_account_number: string | null;
+    bank_routing_number: string | null;
+    contact_name: string | null;
     original_email: string;
     current_contact_email: string | null;
+    contact_phone: string | null;
+    latest_reasoning: { reasoning: string; issues: { message: string }[] } | null;
   };
   audit_trail: AuditEntry[];
+}
+
+function DetailRow({ label, value }: { label: string; value: string | null | undefined }) {
+  if (!value) return null;
+  return (
+    <>
+      <span style={{ fontSize: 12, color: "#888780" }}>{label}</span>
+      <span style={{ fontSize: 13, color: "#1a1a18", fontWeight: 500, wordBreak: "break-all" }}>{value}</span>
+    </>
+  );
 }
 
 const STATUSES = ["approved", "pending", "rejected"] as const;
@@ -110,6 +132,29 @@ export function EmployeeVendorDetailPage() {
       <p className="-mt-4 text-[13px] text-text-secondary">
         {vendor.tax_id_country} · {vendor.tax_id}
       </p>
+
+      <Card>
+        <p className="mb-3 text-[13px] font-medium">Submission details</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 24px" }}>
+          <DetailRow label="Legal name" value={vendor.legal_name} />
+          <DetailRow label="Trading name" value={vendor.trading_name} />
+          <DetailRow label="Country" value={vendor.tax_id_country} />
+          <DetailRow label="Address" value={vendor.address
+            ? [vendor.address.street, vendor.address.city, vendor.address.region, vendor.address.postal_code].filter(Boolean).join(", ")
+            : null} />
+          {vendor.ein && <DetailRow label="EIN" value={vendor.ein} />}
+          {vendor.vat_number && <DetailRow label="VAT number" value={vendor.vat_number} />}
+          {vendor.gstin && <DetailRow label="GSTIN" value={vendor.gstin} />}
+          {vendor.pan && <DetailRow label="PAN" value={vendor.pan} />}
+          <DetailRow label="Bank name" value={vendor.bank_name} />
+          <DetailRow label="Account holder" value={vendor.bank_account_holder_name} />
+          <DetailRow label="Account number" value={vendor.bank_account_number} />
+          <DetailRow label="Routing / SWIFT-BIC" value={vendor.bank_routing_number} />
+          <DetailRow label="Contact name" value={vendor.contact_name} />
+          <DetailRow label="Contact email" value={vendor.current_contact_email ?? vendor.original_email} />
+          <DetailRow label="Phone" value={vendor.contact_phone} />
+        </div>
+      </Card>
 
       {vendor.latest_reasoning && (
         <Card>

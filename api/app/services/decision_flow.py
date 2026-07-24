@@ -29,7 +29,9 @@ def vendor_row_from_submission(submission: VendorSubmission) -> dict:
         "bank_account_holder_name": submission.bank_account_holder_name,
         "bank_account_number": submission.bank_account_number,
         "bank_routing_number": submission.bank_routing_number,
+        "contact_name": submission.contact_name,
         "current_contact_email": submission.contact_email,
+        "contact_phone": submission.contact_phone,
         "documents": [d.model_dump() for d in submission.documents],
         **named,
     }
