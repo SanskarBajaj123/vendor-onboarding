@@ -205,7 +205,7 @@ function PhoneInput({
   const isValid = localNumber.length === 10;
   const showError = touched && !isValid;
 
-  const updateFull = (country: DialCountry, num: string) => {
+  const updateFull = (num: string) => {
     onChange(num);
     onValidChange?.(num.length === 10);
   };
@@ -222,13 +222,13 @@ function PhoneInput({
     setSelectedCountry(c);
     setOpen(false);
     setQuery("");
-    updateFull(c, localNumber);
+    updateFull(localNumber);
   }
 
   function handleNumberChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = e.target.value.replace(/\D/g, "").slice(0, 10);
     setLocalNumber(raw);
-    updateFull(selectedCountry, raw);
+    updateFull(raw);
   }
 
   function handleBlur() {
