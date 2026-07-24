@@ -51,6 +51,7 @@ interface VendorDetail {
     original_email: string;
     current_contact_email: string | null;
     contact_phone: string | null;
+    contact_phone_country_code: string | null;
     latest_reasoning: { reasoning: string; issues: { message: string }[] } | null;
   };
   audit_trail: AuditEntry[];
@@ -152,7 +153,11 @@ export function EmployeeVendorDetailPage() {
           <DetailRow label="Routing / SWIFT-BIC" value={vendor.bank_routing_number} />
           <DetailRow label="Contact name" value={vendor.contact_name} />
           <DetailRow label="Contact email" value={vendor.current_contact_email ?? vendor.original_email} />
-          <DetailRow label="Phone" value={vendor.contact_phone} />
+          <DetailRow label="Phone" value={
+            vendor.contact_phone
+              ? `${vendor.contact_phone_country_code ?? ""} ${vendor.contact_phone}`.trim()
+              : null
+          } />
         </div>
       </Card>
 

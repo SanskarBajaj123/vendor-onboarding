@@ -56,5 +56,6 @@ class VendorSubmission(BaseModel):
     contact_name: str = Field(min_length=1)
     contact_email: EmailStr
     contact_phone: Optional[str] = None
+    contact_phone_country_code: Optional[str] = None
 
     documents: list[DocumentRef]

@@ -191,9 +191,11 @@ const DIAL_COUNTRIES: DialCountry[] = [
 function PhoneInput({
   onChange,
   onValidChange,
+  onDialCode,
 }: {
-  onChange: (full: string) => void;
+  onChange: (digits: string) => void;
   onValidChange?: (valid: boolean) => void;
+  onDialCode?: (code: string) => void;
 }) {
   const [selectedCountry, setSelectedCountry] = useState<DialCountry>(
     DIAL_COUNTRIES.find((c) => c.code === "IN")!
@@ -205,8 +207,9 @@ function PhoneInput({
   const isValid = localNumber.length === 10;
   const showError = touched && !isValid;
 
-  const updateFull = (num: string) => {
+  const updateFull = (num: string, country: DialCountry = selectedCountry) => {
     onChange(num);
+    onDialCode?.(country.dial);
     onValidChange?.(num.length === 10);
   };
 
@@ -222,7 +225,7 @@ function PhoneInput({
     setSelectedCountry(c);
     setOpen(false);
     setQuery("");
-    updateFull(localNumber);
+    updateFull(localNumber, c);
   }
 
   function handleNumberChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -342,7 +345,7 @@ function PhoneInput({
 // ─── Sign-up step 1: credentials ────────────────────────────────────────────
 
 interface CredentialsFormProps {
-  onCreated: (email: string, mobile: string) => void;
+  onCreated: (email: string, mobile: string, dialCode: string) => void;
   onSwitch: () => void;
 }
 
@@ -350,6 +353,7 @@ function CredentialsForm({ onCreated, onSwitch }: CredentialsFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mobile, setMobile] = useState("");
+  const [dialCode, setDialCode] = useState("+91");
   const [phoneValid, setPhoneValid] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -361,12 +365,12 @@ function CredentialsForm({ onCreated, onSwitch }: CredentialsFormProps) {
     try {
       const { error, data } = await supabase.auth.signUp({
         email, password,
-        options: { emailRedirectTo: window.location.origin, data: { mobile } },
+        options: { emailRedirectTo: window.location.origin, data: { mobile, dialCode } },
       });
       if (error) throw error;
       if (data.session || data.user) {
         sessionStorage.setItem("new_signup", "1");
-        onCreated(email, mobile);
+        onCreated(email, mobile, dialCode);
       } else {
         setError("Check your inbox to confirm your email, then sign in.");
       }
@@ -402,7 +406,7 @@ function CredentialsForm({ onCreated, onSwitch }: CredentialsFormProps) {
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <Field label="Email ID *" type="email" placeholder="name@company.com" required
           value={email} onChange={(e) => setEmail(e.target.value)} />
-        <PhoneInput onChange={setMobile} onValidChange={setPhoneValid} />
+        <PhoneInput onChange={setMobile} onValidChange={setPhoneValid} onDialCode={setDialCode} />
         <Field label="Password *" type="password" placeholder="At least 6 characters" required minLength={6}
           value={password} onChange={(e) => setPassword(e.target.value)} />
         {error && <p style={{ margin: 0, fontSize: 12, color: "#a32d2d" }}>{error}</p>}
@@ -442,7 +446,7 @@ async function signOutAndReturn() {
   window.location.replace("/");
 }
 
-function VendorOnboardingForm({ accountEmail, accountMobile }: { accountEmail: string; accountMobile: string }) {
+function VendorOnboardingForm({ accountEmail, accountMobile, accountDialCode }: { accountEmail: string; accountMobile: string; accountDialCode: string }) {
   const [docs, setDocs] = useState<Record<string, DocumentRef>>({});
   const [uploading, setUploading] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -491,6 +495,7 @@ function VendorOnboardingForm({ accountEmail, accountMobile }: { accountEmail: s
       contact_name: values.contact_name,
       contact_email: values.contact_email,
       contact_phone: values.contact_phone || null,
+      contact_phone_country_code: accountDialCode || null,
       documents: Object.values(docs),
     });
   }
@@ -681,10 +686,12 @@ export function AuthPage() {
   const [view, setView] = useState<View>("signin");
   const [accountEmail, setAccountEmail] = useState("");
   const [accountMobile, setAccountMobile] = useState("");
+  const [accountDialCode, setAccountDialCode] = useState("+91");
 
-  function handleAccountCreated(email: string, mobile: string) {
+  function handleAccountCreated(email: string, mobile: string, dialCode: string) {
     setAccountEmail(email);
     setAccountMobile(mobile);
+    setAccountDialCode(dialCode);
     setView("signup-step2");
   }
 
@@ -705,7 +712,7 @@ export function AuthPage() {
         <div style={{ width: "100%", maxWidth: view === "signup-step2" ? 700 : 420 }}>
           {view === "signin" && <SignInForm onSwitch={() => setView("signup-step1")} />}
           {view === "signup-step1" && <CredentialsForm onCreated={handleAccountCreated} onSwitch={() => setView("signin")} />}
-          {view === "signup-step2" && <VendorOnboardingForm accountEmail={accountEmail} accountMobile={accountMobile} />}
+          {view === "signup-step2" && <VendorOnboardingForm accountEmail={accountEmail} accountMobile={accountMobile} accountDialCode={accountDialCode} />}
         </div>
       </div>
     </div>

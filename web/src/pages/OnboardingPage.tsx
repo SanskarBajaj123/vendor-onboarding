@@ -28,6 +28,7 @@ interface VendorRecord {
   current_contact_email: string | null;
   original_email: string;
   contact_phone: string | null;
+  contact_phone_country_code: string | null;
   latest_reasoning: { reasoning: string; issues: { message: string }[] } | null;
 }
 
@@ -262,6 +263,7 @@ export function OnboardingPage() {
       contact_name: values.contact_name,
       contact_email: values.contact_email,
       contact_phone: values.contact_phone || null,
+      contact_phone_country_code: existing?.contact_phone_country_code ?? null,
       documents: Object.values(docs),
     });
   }

@@ -32,6 +32,7 @@ def vendor_row_from_submission(submission: VendorSubmission) -> dict:
         "contact_name": submission.contact_name,
         "current_contact_email": submission.contact_email,
         "contact_phone": submission.contact_phone,
+        "contact_phone_country_code": submission.contact_phone_country_code,
         "documents": [d.model_dump() for d in submission.documents],
         **named,
     }
