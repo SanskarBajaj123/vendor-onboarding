@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { Card } from "../components/ui/Card";
@@ -58,12 +58,21 @@ interface VendorDetail {
 }
 
 function DetailRow({ label, value }: { label: string; value: string | null | undefined }) {
-  if (!value) return null;
   return (
-    <>
-      <span style={{ fontSize: 12, color: "#888780" }}>{label}</span>
-      <span style={{ fontSize: 13, color: "#1a1a18", fontWeight: 500, wordBreak: "break-all" }}>{value}</span>
-    </>
+    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <span style={{ fontSize: 11, color: "#888780", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>{label}</span>
+      <span style={{ fontSize: 13, color: value ? "#1a1a18" : "#b4b2a9", fontWeight: value ? 500 : 400, wordBreak: "break-all" }}>
+        {value ?? "—"}
+      </span>
+    </div>
+  );
+}
+
+function SectionHeader({ children }: { children: ReactNode }) {
+  return (
+    <p style={{ margin: "16px 0 10px", fontSize: 11, fontWeight: 700, color: "#888780", textTransform: "uppercase", letterSpacing: "0.07em", gridColumn: "1 / -1", borderTop: "1px solid #ece9e2", paddingTop: 14 }}>
+      {children}
+    </p>
   );
 }
 
@@ -135,24 +144,35 @@ export function EmployeeVendorDetailPage() {
       </p>
 
       <Card>
-        <p className="mb-3 text-[13px] font-medium">Submission details</p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 24px" }}>
+        <p className="mb-1 text-[13px] font-medium">Submission details</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px 20px" }}>
+
+          <SectionHeader>Company</SectionHeader>
           <DetailRow label="Legal name" value={vendor.legal_name} />
-          <DetailRow label="Trading name" value={vendor.trading_name} />
+          <DetailRow label="Trading name / DBA" value={vendor.trading_name} />
           <DetailRow label="Country" value={vendor.tax_id_country} />
           <DetailRow label="Address" value={vendor.address
             ? [vendor.address.street, vendor.address.city, vendor.address.region, vendor.address.postal_code].filter(Boolean).join(", ")
             : null} />
-          {vendor.ein && <DetailRow label="EIN" value={vendor.ein} />}
+
+          <SectionHeader>Tax identification</SectionHeader>
+          {vendor.ein      && <DetailRow label="EIN" value={vendor.ein} />}
           {vendor.vat_number && <DetailRow label="VAT number" value={vendor.vat_number} />}
-          {vendor.gstin && <DetailRow label="GSTIN" value={vendor.gstin} />}
-          {vendor.pan && <DetailRow label="PAN" value={vendor.pan} />}
+          {vendor.gstin    && <DetailRow label="GSTIN" value={vendor.gstin} />}
+          {vendor.pan      && <DetailRow label="PAN" value={vendor.pan} />}
+          {!vendor.ein && !vendor.vat_number && !vendor.gstin && (
+            <DetailRow label="Tax ID" value={vendor.tax_id} />
+          )}
+
+          <SectionHeader>Bank details</SectionHeader>
           <DetailRow label="Bank name" value={vendor.bank_name} />
           <DetailRow label="Account holder" value={vendor.bank_account_holder_name} />
-          <DetailRow label="Account number" value={vendor.bank_account_number} />
+          <DetailRow label="Account number / IBAN" value={vendor.bank_account_number} />
           <DetailRow label="Routing / SWIFT-BIC" value={vendor.bank_routing_number} />
+
+          <SectionHeader>Contact</SectionHeader>
           <DetailRow label="Contact name" value={vendor.contact_name} />
-          <DetailRow label="Contact email" value={vendor.current_contact_email ?? vendor.original_email} />
+          <DetailRow label="Email" value={vendor.current_contact_email ?? vendor.original_email} />
           <DetailRow label="Phone" value={
             vendor.contact_phone
               ? `${vendor.contact_phone_country_code ?? ""} ${vendor.contact_phone}`.trim()
