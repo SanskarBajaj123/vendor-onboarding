@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.routers import vendors, employees, verification
+from app.supabase_client import get_service_client
 
 settings = get_settings()
 
@@ -30,3 +31,9 @@ app.include_router(verification.router)
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/health/db")
+def health_db():
+    get_service_client().table("vendors").select("id").limit(1).execute()
+    return {"status": "ok", "db": "connected"}

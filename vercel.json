@@ -4,7 +4,8 @@
   "rewrites": [
     { "source": "/vendors/:path*",   "destination": "/api/index.py" },
     { "source": "/employees/:path*", "destination": "/api/index.py" },
-    { "source": "/health",           "destination": "/api/index.py" },
+    { "source": "/health",            "destination": "/api/index.py" },
+    { "source": "/health/db",         "destination": "/api/index.py" },
     { "source": "/(.*)",             "destination": "/index.html" }
   ]
 }

@@ -12,12 +12,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Ping vendor-onboarding Supabase
+      - name: Ping vendor-onboarding DB via health endpoint
         run: |
-          echo "Pinging vendor-onboarding Supabase..."
-          curl --fail --silent --show-error \
-            --max-time 30 --retry 2 --retry-delay 5 \
-            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/"
+          echo "Pinging /health/db..."
+          STATUS=$(curl --silent --max-time 30 --retry 2 --retry-delay 5 \
+            -w "%{http_code}" -o /tmp/body.txt \
+            "https://dev-s-vendor-onboarding.vercel.app/health/db")
+          echo "Response: $(cat /tmp/body.txt)"
+          echo "HTTP status: $STATUS"
+          if [ "$STATUS" -lt 200 ] || [ "$STATUS" -ge 300 ]; then
+            echo "Error: got HTTP $STATUS"
+            exit 1
+          fi
           echo "DB ping OK"
