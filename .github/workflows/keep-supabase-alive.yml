@@ -1,0 +1,23 @@
+# Keeps this project's Supabase free-tier DB alive by triggering activity every 3 days (auto-pause threshold: 7 days).
+name: keep-supabase-alive
+
+on:
+  schedule:
+    - cron: '0 6 */3 * *'   # 06:00 UTC every 3 days
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Ping Supabase DB
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping vendor-onboarding Supabase
+        run: |
+          echo "Pinging vendor-onboarding Supabase..."
+          curl --fail --silent --show-error \
+            --max-time 30 --retry 2 --retry-delay 5 \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/"
+          echo "DB ping OK"
