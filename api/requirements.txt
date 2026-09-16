@@ -12,3 +12,4 @@ httpx
 rapidfuzz
 email-validator
 fpdf2
+groq

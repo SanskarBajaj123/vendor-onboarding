@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     supabase_service_role_key: str
 
     mistral_api_key: str = ""
+    groq_api_key: str = ""
+    groq_model: str = "llama-3.1-8b-instant"
 
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.5-flash"

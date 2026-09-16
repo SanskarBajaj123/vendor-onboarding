@@ -1,10 +1,11 @@
-"""Document extraction via Mistral free tier.
+"""Document extraction using two free-tier APIs.
 
-Step 1: OCR each document with mistral-ocr-latest.
-Step 2: One structured extraction call with mistral-small-latest.
+Step 1: OCR each document with Mistral mistral-ocr-latest (free tier).
+Step 2: Structured JSON extraction with Groq (free tier, 30 RPM, 14 400 req/day).
 
-Both models are on Mistral's free tier. Documents are processed sequentially
-with a short pause between calls to stay within per-second rate limits.
+Groq replaces mistral-small-latest for extraction because mistral-small shares
+the same account-wide rate limit as the OCR calls, causing immediate 429s on
+the extraction step. Groq has a completely separate and more generous free tier.
 """
 import base64
 import json
@@ -14,14 +15,10 @@ from dataclasses import dataclass
 
 from app.config import get_settings
 
-# Delay between successive OCR calls — keeps per-second burst under limit.
-_INTER_DOC_DELAY = 2.0  # seconds
+# Delay between successive OCR calls — keeps Mistral per-second burst under limit.
+_INTER_DOC_DELAY = 1.5  # seconds
 
-# Delay before the extraction call — lets the rate-limit window cool down
-# after all OCR calls have completed.
-_PRE_EXTRACTION_DELAY = 4.0  # seconds
-
-# Retry delays on 429 — kept short so Vercel's 30s function timeout is not hit.
+# Retry delays on 429 — short enough to fit within Vercel's 30s timeout.
 _RETRY_DELAYS = [3, 6]  # seconds (2 retries max)
 
 
@@ -81,15 +78,17 @@ def extract_all_documents(
     documents: list[DocumentInput],
     vendor_id: str | None = None,
 ) -> dict[str, dict]:
-    """OCR all docs with mistral-ocr-latest, then one structured extraction with mistral-small-latest."""
+    """OCR all docs with mistral-ocr-latest, then structured extraction with Groq."""
     from mistralai import Mistral
+    from groq import Groq
     from app.services import process_log
 
     if not documents:
         return {}
 
     settings = get_settings()
-    client = Mistral(api_key=settings.mistral_api_key)
+    mistral_client = Mistral(api_key=settings.mistral_api_key)
+    groq_client = Groq(api_key=settings.groq_api_key)
     doc_labels = [d.doc_type.replace("_", " ") for d in documents]
 
     if vendor_id:
@@ -98,7 +97,7 @@ def extract_all_documents(
             step="mistral_request",
             level="info",
             message=f"OCR-ing {len(documents)} doc(s) with mistral-ocr-latest ({', '.join(doc_labels)})",
-            details={"document_types": [d.doc_type for d in documents], "model": "mistral-ocr-latest + mistral-small-latest"},
+            details={"document_types": [d.doc_type for d in documents], "model": f"mistral-ocr-latest + {settings.groq_model}"},
         )
 
     # Step 1: OCR each document sequentially with a gap to avoid burst rate limits
@@ -110,7 +109,7 @@ def extract_all_documents(
         b64 = base64.b64encode(doc.file_bytes).decode()
         try:
             ocr_resp = _call_with_retry(
-                client.ocr.process,
+                mistral_client.ocr.process,
                 model="mistral-ocr-latest",
                 document={
                     "type": "document_url",
@@ -126,19 +125,17 @@ def extract_all_documents(
         f"=== {doc_type} ===\n{text}" for doc_type, text in ocr_texts.items()
     )
 
-    # Longer pause before extraction — lets the per-minute rate limit bucket
-    # recover after the OCR calls, so the extraction call doesn't immediately 429.
-    time.sleep(_PRE_EXTRACTION_DELAY)
+    # Step 2: Structured JSON extraction via Groq (separate free tier, 30 RPM)
+    def _groq_extract():
+        resp = groq_client.chat.completions.create(
+            model=settings.groq_model,
+            messages=[{"role": "user", "content": EXTRACTION_PROMPT + combined}],
+            response_format={"type": "json_object"},
+            temperature=0,
+        )
+        return resp.choices[0].message.content or "{}"
 
-    extraction_resp = _call_with_retry(
-        client.chat.complete,
-        model="mistral-small-latest",
-        messages=[{"role": "user", "content": EXTRACTION_PROMPT + combined}],
-        response_format={"type": "json_object"},
-        temperature=0,
-    )
-
-    raw = extraction_resp.choices[0].message.content or "{}"
+    raw = _call_with_retry(_groq_extract)
     try:
         result: dict[str, dict] = json.loads(raw)
     except json.JSONDecodeError:
