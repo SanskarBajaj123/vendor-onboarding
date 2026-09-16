@@ -2,7 +2,7 @@ from app.models.decision import Issue
 from app.models.vendor import REQUIRED_DOCUMENTS, VendorSubmission
 from app.services import process_log, storage
 from app.services.fuzzy_match import addresses_match, names_match, tax_ids_match
-from app.services.gemini_extraction import DocumentInput, extract_all_documents
+from app.services.document_extraction import DocumentInput, extract_all_documents
 
 ID_DOCUMENT_BY_COUNTRY = {
     "US": "ein_confirmation_letter",
