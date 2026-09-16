@@ -9,7 +9,7 @@ settings = get_settings()
 
 app = FastAPI(title="Vendor Onboarding API")
 
-_origins = [settings.frontend_url, "https://zamp-vendor-onboarding.vercel.app"]
+_origins = [settings.frontend_url, "https://dev-s-vendor-onboarding.vercel.app"]
 # Include any additional origins from env (comma-separated)
 if settings.frontend_url not in _origins:
     _origins.append(settings.frontend_url)

@@ -7,9 +7,32 @@ Both models are on Mistral's free tier.
 import base64
 import json
 import mimetypes
+import time
 from dataclasses import dataclass
 
 from app.config import get_settings
+
+_RETRY_DELAYS = [2, 5, 10]  # seconds between attempts on rate-limit (429)
+
+
+def _is_rate_limit(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return "429" in msg or "rate limit" in msg or "too many" in msg
+
+
+def _call_with_retry(fn, *args, **kwargs):
+    """Call fn(*args, **kwargs), retrying up to 3 times on rate-limit errors."""
+    last_exc = None
+    for delay in [0] + _RETRY_DELAYS:
+        if delay:
+            time.sleep(delay)
+        try:
+            return fn(*args, **kwargs)
+        except Exception as e:
+            last_exc = e
+            if not _is_rate_limit(e):
+                raise
+    raise last_exc
 
 EXTRACTION_PROMPT = """You are extracting structured data from vendor onboarding documents.
 
@@ -73,7 +96,8 @@ def extract_all_documents(
         mime_type = mimetypes.guess_type(doc.filename)[0] or "application/pdf"
         b64 = base64.b64encode(doc.file_bytes).decode()
         try:
-            ocr_resp = client.ocr.process(
+            ocr_resp = _call_with_retry(
+                client.ocr.process,
                 model="mistral-ocr-latest",
                 document={
                     "type": "document_url",
@@ -89,7 +113,8 @@ def extract_all_documents(
         f"=== {doc_type} ===\n{text}" for doc_type, text in ocr_texts.items()
     )
 
-    extraction_resp = client.chat.complete(
+    extraction_resp = _call_with_retry(
+        client.chat.complete,
         model="mistral-small-latest",
         messages=[{"role": "user", "content": EXTRACTION_PROMPT + combined}],
         response_format={"type": "json_object"},
