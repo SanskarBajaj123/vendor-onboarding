@@ -1,12 +1,12 @@
-"""Document extraction using free-tier AI APIs.
+"""Document extraction via Mistral free tier.
 
-Step 1: OCR each document with Gemini (free tier, 15 RPM, supports PDFs natively).
-Step 2: One structured extraction call with mistral-small-latest using all OCR text.
+Step 1: OCR each document with mistral-ocr-latest.
+Step 2: One structured extraction call with mistral-small-latest.
 
-Why two models:
-- Gemini handles PDF/image reading without rate-limit issues on free tier.
-- Mistral-small is kept for JSON extraction (text-only, cheap, accurate).
+Both models are on Mistral's free tier. Documents are processed sequentially
+with a short pause between calls to stay within per-second rate limits.
 """
+import base64
 import json
 import mimetypes
 import time
@@ -14,18 +14,17 @@ from dataclasses import dataclass
 
 from app.config import get_settings
 
-_RETRY_DELAYS = [10, 30, 60]  # seconds between attempts on rate-limit
+# Delays between successive OCR calls (separate from retry delays).
+# Mistral free tier allows ~1 req/sec; 1.5s gap keeps us comfortably under.
+_INTER_DOC_DELAY = 1.5  # seconds
+
+# Retry delays on 429 responses
+_RETRY_DELAYS = [15, 30, 60]  # seconds
 
 
 def _is_rate_limit(exc: Exception) -> bool:
     msg = str(exc).lower()
-    return (
-        "429" in msg
-        or "rate limit" in msg
-        or "too many" in msg
-        or "resource_exhausted" in msg
-        or "quota" in msg
-    )
+    return "429" in msg or "rate limit" in msg or "too many" in msg
 
 
 def _call_with_retry(fn, *args, **kwargs):
@@ -41,31 +40,6 @@ def _call_with_retry(fn, *args, **kwargs):
             if not _is_rate_limit(e):
                 raise
     raise last_exc
-
-
-def _ocr_with_gemini(file_bytes: bytes, mime_type: str, settings) -> str:
-    """Use Gemini (free tier) to read a document.
-    Supports PDFs and images natively via inline bytes."""
-    from google import genai
-    from google.genai import types
-
-    client = genai.Client(api_key=settings.gemini_api_key)
-
-    def _call():
-        response = client.models.generate_content(
-            model=settings.gemini_model,
-            contents=[
-                types.Part.from_bytes(data=file_bytes, mime_type=mime_type),
-                (
-                    "Extract all text from this document exactly as it appears. "
-                    "Return the complete text content as markdown, preserving "
-                    "headings, tables, and structure. Do not summarise."
-                ),
-            ],
-        )
-        return response.text or ""
-
-    return _call_with_retry(_call)
 
 
 EXTRACTION_PROMPT = """You are extracting structured data from vendor onboarding documents.
@@ -104,7 +78,7 @@ def extract_all_documents(
     documents: list[DocumentInput],
     vendor_id: str | None = None,
 ) -> dict[str, dict]:
-    """OCR all docs with Gemini, then one structured extraction with mistral-small-latest."""
+    """OCR all docs with mistral-ocr-latest, then one structured extraction with mistral-small-latest."""
     from mistralai import Mistral
     from app.services import process_log
 
@@ -112,7 +86,7 @@ def extract_all_documents(
         return {}
 
     settings = get_settings()
-    mistral_client = Mistral(api_key=settings.mistral_api_key)
+    client = Mistral(api_key=settings.mistral_api_key)
     doc_labels = [d.doc_type.replace("_", " ") for d in documents]
 
     if vendor_id:
@@ -120,16 +94,27 @@ def extract_all_documents(
             vendor_id=vendor_id,
             step="mistral_request",
             level="info",
-            message=f"OCR-ing {len(documents)} doc(s) with {settings.gemini_model} ({', '.join(doc_labels)})",
-            details={"document_types": [d.doc_type for d in documents], "model": f"{settings.gemini_model} + mistral-small-latest"},
+            message=f"OCR-ing {len(documents)} doc(s) with mistral-ocr-latest ({', '.join(doc_labels)})",
+            details={"document_types": [d.doc_type for d in documents], "model": "mistral-ocr-latest + mistral-small-latest"},
         )
 
-    # Step 1: OCR each document with Gemini (supports PDFs natively, free tier)
+    # Step 1: OCR each document sequentially with a gap to avoid burst rate limits
     ocr_texts: dict[str, str] = {}
-    for doc in documents:
+    for i, doc in enumerate(documents):
+        if i > 0:
+            time.sleep(_INTER_DOC_DELAY)
         mime_type = mimetypes.guess_type(doc.filename)[0] or "application/pdf"
+        b64 = base64.b64encode(doc.file_bytes).decode()
         try:
-            ocr_texts[doc.doc_type] = _ocr_with_gemini(doc.file_bytes, mime_type, settings)
+            ocr_resp = _call_with_retry(
+                client.ocr.process,
+                model="mistral-ocr-latest",
+                document={
+                    "type": "document_url",
+                    "document_url": f"data:{mime_type};base64,{b64}",
+                },
+            )
+            ocr_texts[doc.doc_type] = "\n".join(page.markdown for page in ocr_resp.pages)
         except Exception as e:
             ocr_texts[doc.doc_type] = f"[OCR failed: {e}]"
 
@@ -138,8 +123,11 @@ def extract_all_documents(
         f"=== {doc_type} ===\n{text}" for doc_type, text in ocr_texts.items()
     )
 
+    # Small pause before extraction to avoid back-to-back bursts
+    time.sleep(_INTER_DOC_DELAY)
+
     extraction_resp = _call_with_retry(
-        mistral_client.chat.complete,
+        client.chat.complete,
         model="mistral-small-latest",
         messages=[{"role": "user", "content": EXTRACTION_PROMPT + combined}],
         response_format={"type": "json_object"},
