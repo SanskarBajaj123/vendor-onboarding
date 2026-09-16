@@ -2,7 +2,7 @@
 
 An end-to-end automated vendor onboarding system. Vendors submit company details and documents; the platform extracts, cross-checks, and decides — approved, pending, or rejected — with a full audit trail and real email notifications at every step.
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Visit%20App-4f46e5?style=for-the-badge)](https://zamp-vendor-onboarding.vercel.app)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Visit%20App-4f46e5?style=for-the-badge)](https://dev-s-vendor-onboarding.vercel.app)
 [![Demo Video](https://img.shields.io/badge/Demo%20Video-Watch%20on%20Loom-00aabb?style=for-the-badge&logo=loom)](https://www.loom.com/share/f90d611d39aa4f21a560587a85e6d9e0)
 [![Stack](https://img.shields.io/badge/Stack-React%20%2B%20FastAPI%20%2B%20Supabase-informational?style=for-the-badge)]()
 
@@ -14,7 +14,7 @@ Watch the full walkthrough — happy path + all 4 edge cases — on Loom:
 
 > **[https://www.loom.com/share/f90d611d39aa4f21a560587a85e6d9e0](https://www.loom.com/share/f90d611d39aa4f21a560587a85e6d9e0)**
 
-Live app: **[https://zamp-vendor-onboarding.vercel.app](https://zamp-vendor-onboarding.vercel.app)**
+Live app: **[https://dev-s-vendor-onboarding.vercel.app](https://dev-s-vendor-onboarding.vercel.app)**
 
 ---
 
@@ -128,7 +128,7 @@ Exact form values and document filenames for each edge case are in [`test_docs/R
 | Backend | FastAPI (Python 3.11) |
 | Auth / DB / Storage | Supabase (PostgreSQL + Row Level Security) |
 | AI — document OCR | Mistral `mistral-ocr-latest` (free tier) |
-| AI — structured extraction | Mistral `mistral-small-latest` (free tier) |
+| AI — structured extraction | Groq `openai/gpt-oss-20b` (free tier, separate rate limit) |
 | Email delivery | Resend (real sends, free tier) |
 | Hosting | Vercel (frontend + serverless API functions) |
 
@@ -143,7 +143,7 @@ All infrastructure is **free tier — $0/month.**
 ├── api/                          # FastAPI backend (Vercel serverless)
 │   ├── app/
 │   │   ├── routers/              # vendors.py, employees.py, verification.py
-│   │   ├── services/             # mistral extraction, cross_check, decision_engine,
+│   │   ├── services/             # document_extraction, cross_check, decision_engine,
 │   │   │                         # decision_flow, email_service, diff, audit,
 │   │   │                         # storage, fuzzy_match, verification_tokens
 │   │   └── models/               # VendorSubmission, Issue, DecisionResult
@@ -187,6 +187,7 @@ All infrastructure is **free tier — $0/month.**
 - Node.js 18+
 - A [Supabase](https://supabase.com) project (free tier)
 - A [Mistral](https://console.mistral.ai) API key (free tier)
+- A [Groq](https://console.groq.com) API key (free tier)
 - A [Resend](https://resend.com) API key (free tier)
 
 ### Backend
@@ -236,6 +237,7 @@ PYTHONPATH=. python scripts/generate_test_docs.py
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 MISTRAL_API_KEY=
+GROQ_API_KEY=
 RESEND_API_KEY=
 RESEND_FROM_EMAIL=onboarding@resend.dev
 RESEND_TO_OVERRIDE=          # optional: redirect all emails to one address (useful for testing)
@@ -277,6 +279,7 @@ RLS policies: vendors see only their own row; employees see everything. Writes t
 SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
 MISTRAL_API_KEY
+GROQ_API_KEY
 RESEND_API_KEY
 RESEND_FROM_EMAIL
 FRONTEND_URL     ← your https://your-app.vercel.app URL
