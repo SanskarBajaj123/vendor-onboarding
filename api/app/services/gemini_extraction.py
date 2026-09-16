@@ -14,12 +14,15 @@ from dataclasses import dataclass
 
 from app.config import get_settings
 
-# Delays between successive OCR calls (separate from retry delays).
-# Mistral free tier allows ~1 req/sec; 1.5s gap keeps us comfortably under.
-_INTER_DOC_DELAY = 1.5  # seconds
+# Delay between successive OCR calls — keeps per-second burst under limit.
+_INTER_DOC_DELAY = 2.0  # seconds
 
-# Retry delays on 429 responses
-_RETRY_DELAYS = [15, 30, 60]  # seconds
+# Delay before the extraction call — lets the rate-limit window cool down
+# after all OCR calls have completed.
+_PRE_EXTRACTION_DELAY = 4.0  # seconds
+
+# Retry delays on 429 — kept short so Vercel's 30s function timeout is not hit.
+_RETRY_DELAYS = [3, 6]  # seconds (2 retries max)
 
 
 def _is_rate_limit(exc: Exception) -> bool:
@@ -123,8 +126,9 @@ def extract_all_documents(
         f"=== {doc_type} ===\n{text}" for doc_type, text in ocr_texts.items()
     )
 
-    # Small pause before extraction to avoid back-to-back bursts
-    time.sleep(_INTER_DOC_DELAY)
+    # Longer pause before extraction — lets the per-minute rate limit bucket
+    # recover after the OCR calls, so the extraction call doesn't immediately 429.
+    time.sleep(_PRE_EXTRACTION_DELAY)
 
     extraction_resp = _call_with_retry(
         client.chat.complete,
