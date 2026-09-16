@@ -1,13 +1,11 @@
 """Document extraction via Mistral free tier.
 
-Step 1: Extract text from each document.
-  - PDFs with a text layer: use pypdf (no API call, no rate limits).
-  - Image files or image-only PDFs: use pixtral-12b-2409 via chat completions.
-Step 2: One structured extraction call with mistral-small-latest using all text.
-Both Mistral models are on the free tier.
+Step 1: OCR each document with pixtral-12b-2409 (Mistral vision model, free tier).
+        Uses the chat completions endpoint, which has a separate rate-limit bucket
+        from the dedicated OCR endpoint (mistral-ocr-latest was consistently 429ing).
+Step 2: One structured extraction call with mistral-small-latest using all OCR text.
 """
 import base64
-import io
 import json
 import mimetypes
 import time
@@ -38,21 +36,8 @@ def _call_with_retry(fn, *args, **kwargs):
     raise last_exc
 
 
-def _extract_pdf_text(file_bytes: bytes) -> str | None:
-    """Try to pull a text layer out of a PDF without any API call.
-    Returns None if the PDF has no readable text (scanned/image-only)."""
-    try:
-        from pypdf import PdfReader
-        reader = PdfReader(io.BytesIO(file_bytes))
-        pages = [page.extract_text() or "" for page in reader.pages]
-        text = "\n".join(pages).strip()
-        return text if len(text) > 50 else None  # less than 50 chars = image-only
-    except Exception:
-        return None
-
-
 def _ocr_with_pixtral(client, file_bytes: bytes, mime_type: str) -> str:
-    """Use pixtral-12b-2409 (vision model, free tier) to read an image or scanned PDF."""
+    """Use pixtral-12b-2409 (Mistral free-tier vision model) to read a document."""
     b64 = base64.b64encode(file_bytes).decode()
     resp = _call_with_retry(
         client.chat.complete,
@@ -77,6 +62,7 @@ def _ocr_with_pixtral(client, file_bytes: bytes, mime_type: str) -> str:
         max_tokens=4096,
     )
     return resp.choices[0].message.content or ""
+
 
 EXTRACTION_PROMPT = """You are extracting structured data from vendor onboarding documents.
 
@@ -114,7 +100,7 @@ def extract_all_documents(
     documents: list[DocumentInput],
     vendor_id: str | None = None,
 ) -> dict[str, dict]:
-    """OCR all docs with mistral-ocr-latest, then one structured extraction with mistral-small-latest."""
+    """OCR all docs with pixtral-12b-2409, then one structured extraction with mistral-small-latest."""
     from mistralai import Mistral
     from app.services import process_log
 
@@ -130,24 +116,16 @@ def extract_all_documents(
             vendor_id=vendor_id,
             step="mistral_request",
             level="info",
-            message=f"Extracting {len(documents)} doc(s) via pypdf/pixtral-12b ({', '.join(doc_labels)})",
-            details={"document_types": [d.doc_type for d in documents], "model": "pypdf + pixtral-12b-2409 + mistral-small-latest"},
+            message=f"OCR-ing {len(documents)} doc(s) with pixtral-12b-2409 ({', '.join(doc_labels)})",
+            details={"document_types": [d.doc_type for d in documents], "model": "pixtral-12b-2409 + mistral-small-latest"},
         )
 
-    # Step 1: Extract text from each document.
-    # Prefer pypdf for PDFs (no API, no rate limits); fall back to pixtral-12b for
-    # image files or scanned PDFs where pypdf finds no text.
+    # Step 1: OCR each document with pixtral-12b-2409
     ocr_texts: dict[str, str] = {}
     for doc in documents:
         mime_type = mimetypes.guess_type(doc.filename)[0] or "application/pdf"
         try:
-            text: str | None = None
-            if mime_type == "application/pdf":
-                text = _extract_pdf_text(doc.file_bytes)
-            if text:
-                ocr_texts[doc.doc_type] = text
-            else:
-                ocr_texts[doc.doc_type] = _ocr_with_pixtral(client, doc.file_bytes, mime_type)
+            ocr_texts[doc.doc_type] = _ocr_with_pixtral(client, doc.file_bytes, mime_type)
         except Exception as e:
             ocr_texts[doc.doc_type] = f"[OCR failed: {e}]"
 
