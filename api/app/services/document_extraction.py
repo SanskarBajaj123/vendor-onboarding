@@ -130,7 +130,6 @@ def extract_all_documents(
         resp = groq_client.chat.completions.create(
             model=settings.groq_model,
             messages=[{"role": "user", "content": EXTRACTION_PROMPT + combined}],
-            response_format={"type": "json_object"},
             temperature=0,
         )
         return resp.choices[0].message.content or "{}"
